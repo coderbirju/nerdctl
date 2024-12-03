@@ -83,3 +83,62 @@ services:
 	assert.NilError(t, err)
 	assert.Equal(t, "hi\n", string(testB))
 }
+
+func TestComposeUpEnvFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows")
+	}
+
+	base := testutil.NewBase(t)
+
+	// Create a temporary directory for the test
+	tmpDir := t.TempDir()
+	fmt.Printf("Created temporary directory: %s\n", tmpDir)
+
+	// Create an .env file
+	envFilePath := filepath.Join(tmpDir, ".env")
+	envFileContent := `
+TEST_VAR1=Hello
+TEST_VAR2=World
+`
+	err := os.WriteFile(envFilePath, []byte(envFileContent), 0644)
+	assert.NilError(t, err)
+	fmt.Printf("Created .env file at: %s\n", envFilePath)
+	fmt.Printf("Env file content:\n%s\n", envFileContent)
+
+	// Create docker-compose.yml
+	dockerComposeYAML := fmt.Sprintf(`
+version: '3'
+services:
+  test:
+    image: %s
+    command: sh -c 'echo $TEST_VAR1 $TEST_VAR2 > /tmp/test_output'
+`, testutil.CommonImage)
+
+	comp := testutil.NewComposeDir(t, dockerComposeYAML)
+	defer comp.CleanUp()
+	fmt.Printf("Created docker-compose.yml at: %s\n", comp.YAMLFullPath())
+	fmt.Printf("Docker Compose YAML content:\n%s\n", dockerComposeYAML)
+
+	// Run compose up with env-file
+	upCmd := base.ComposeCmd("-f", comp.YAMLFullPath(), "--env-file", envFilePath, "up", "-d")
+	upCmd.AssertOK()
+	defer base.ComposeCmd("-f", comp.YAMLFullPath(), "down").AssertOK()
+
+	// Print compose logs
+	logsCmd := base.ComposeCmd("-f", comp.YAMLFullPath(), "logs")
+	fmt.Printf("Compose logs:\n%s\n", logsCmd.Run().Combined())
+
+	// Get container ID
+	containerID := base.ComposeCmd("-f", comp.YAMLFullPath(), "ps", "-q").OutLines()[0]
+	fmt.Printf("Container ID: %s\n", containerID)
+
+	// Execute command in the container
+	execCmd := base.Cmd("exec", containerID, "cat", "/tmp/test_output")
+	out := execCmd.Out()
+
+	fmt.Printf("Command output: %s\n", out)
+
+	assert.Equal(t, "Hello World\n", out)
+	fmt.Println("Test completed successfully")
+}
