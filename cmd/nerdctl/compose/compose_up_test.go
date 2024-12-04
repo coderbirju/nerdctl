@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -82,4 +83,57 @@ services:
 	testB, err := os.ReadFile(testFile)
 	assert.NilError(t, err)
 	assert.Equal(t, "hi\n", string(testB))
+}
+
+func TestComposeUpEnvFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows")
+	}
+
+	base := testutil.NewBase(t)
+
+	tmpDir := t.TempDir()
+	fmt.Printf("Created temporary directory: %s\n", tmpDir)
+
+	envFilePath := filepath.Join(tmpDir, ".env")
+	envFileContent := "TEST_VAR1=Hello\nTEST_VAR2=World"
+	err := os.WriteFile(envFilePath, []byte(envFileContent), 0644)
+	assert.NilError(t, err)
+	fmt.Printf("Created .env file at: %s\n", envFilePath)
+	fmt.Printf("Env file content:\n%s\n", envFileContent)
+
+	dockerComposeYAML := fmt.Sprintf(`
+version: '3.1'
+services:
+  show-env:
+    image: %s
+    command: ["sh", "-c", "env"]
+`, testutil.CommonImage)
+
+	comp := testutil.NewComposeDir(t, dockerComposeYAML)
+	defer comp.CleanUp()
+	fmt.Printf("Created docker-compose.yml at: %s\n", comp.YAMLFullPath())
+	fmt.Printf("Docker Compose YAML content:\n%s\n", dockerComposeYAML)
+
+	upCmd := base.ComposeCmd("--env-file", envFilePath, "-f", comp.YAMLFullPath(), "up", "-d")
+	fmt.Println("Executing up command:", upCmd)
+	upCmd.AssertOK()
+
+	defer base.ComposeCmd("-f", comp.YAMLFullPath(), "down", "-v").AssertOK()
+
+	containerID := strings.TrimSpace(base.ComposeCmd("-f", comp.YAMLFullPath(), "ps", "-q").Run().Stdout())
+	fmt.Printf("Container ID: %s\n", containerID)
+	if containerID == "" {
+		t.Fatalf("Failed to get container ID")
+	}
+
+	logsCmd := base.ComposeCmd("-f", comp.YAMLFullPath(), "logs", containerID)
+	logs := logsCmd.Run().Stdout()
+	fmt.Printf("Container logs:\n%s\n", logs)
+
+	// Check for environment variables in the logs
+	assert.Assert(t, strings.Contains(logs, "TEST_VAR1=Hello"), "TEST_VAR1 not found in logs")
+	assert.Assert(t, strings.Contains(logs, "TEST_VAR2=World"), "TEST_VAR2 not found in logs")
+
+	fmt.Println("Test completed successfully")
 }
