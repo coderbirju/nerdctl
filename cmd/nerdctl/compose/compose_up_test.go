@@ -21,7 +21,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
+	"time"
 
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/icmd"
@@ -91,28 +93,22 @@ func TestComposeUpEnvFile(t *testing.T) {
 
 	base := testutil.NewBase(t)
 
-	// Create a temporary directory for the test
 	tmpDir := t.TempDir()
 	fmt.Printf("Created temporary directory: %s\n", tmpDir)
 
-	// Create an .env file
 	envFilePath := filepath.Join(tmpDir, ".env")
-	envFileContent := `
-TEST_VAR1=Hello
-TEST_VAR2=World
-`
+	envFileContent := `TEST_VAR1=Hello TEST_VAR2=World`
 	err := os.WriteFile(envFilePath, []byte(envFileContent), 0644)
 	assert.NilError(t, err)
 	fmt.Printf("Created .env file at: %s\n", envFilePath)
 	fmt.Printf("Env file content:\n%s\n", envFileContent)
 
-	// Create docker-compose.yml
 	dockerComposeYAML := fmt.Sprintf(`
 version: '3'
 services:
   test:
     image: %s
-    command: sh -c 'echo $TEST_VAR1 $TEST_VAR2 > /tmp/test_output'
+    command: sh -c 'echo $TEST_VAR1 $TEST_VAR2'
 `, testutil.CommonImage)
 
 	comp := testutil.NewComposeDir(t, dockerComposeYAML)
@@ -120,21 +116,21 @@ services:
 	fmt.Printf("Created docker-compose.yml at: %s\n", comp.YAMLFullPath())
 	fmt.Printf("Docker Compose YAML content:\n%s\n", dockerComposeYAML)
 
-	// Run compose up with env-file
-	upCmd := base.ComposeCmd("-f", comp.YAMLFullPath(), "--env-file", envFilePath, "up", "-d")
+	upCmd := base.ComposeCmd("--env-file", envFilePath, "-f", comp.YAMLFullPath(), "up", "-d")
 	upCmd.AssertOK()
+	time.Sleep(5 * time.Second)
 	defer base.ComposeCmd("-f", comp.YAMLFullPath(), "down").AssertOK()
 
-	// Print compose logs
-	logsCmd := base.ComposeCmd("-f", comp.YAMLFullPath(), "logs")
-	fmt.Printf("Compose logs:\n%s\n", logsCmd.Run().Combined())
+	psCmd := base.ComposeCmd("-f", comp.YAMLFullPath(), "ps", "-a")
+	fmt.Printf("Compose ps output:\n%s\n", psCmd.Run().Combined())
 
-	// Get container ID
-	containerID := base.ComposeCmd("-f", comp.YAMLFullPath(), "ps", "-q").OutLines()[0]
+	containerID := strings.TrimSpace(base.ComposeCmd("-f", comp.YAMLFullPath(), "ps", "-q").Out())
 	fmt.Printf("Container ID: %s\n", containerID)
+	if containerID == "" {
+		t.Fatalf("Failed to get container ID")
+	}
 
-	// Execute command in the container
-	execCmd := base.Cmd("exec", containerID, "cat", "/tmp/test_output")
+	execCmd := base.Cmd("logs", containerID)
 	out := execCmd.Out()
 
 	fmt.Printf("Command output: %s\n", out)
