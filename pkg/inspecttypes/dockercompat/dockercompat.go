@@ -46,7 +46,6 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/imgutil"
 	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/native"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
-	"github.com/containerd/nerdctl/v2/pkg/logging"
 	"github.com/containerd/nerdctl/v2/pkg/ocihook/state"
 )
 
@@ -97,7 +96,14 @@ type ImageMetadata struct {
 
 type LogConfig struct {
 	Type   string
-	Config logging.LogConfig
+	Config loggerLogConfig
+}
+
+type loggerLogConfig struct {
+	Driver  string            `json:"driver"`
+	Opts    map[string]string `json:"opts,omitempty"`
+	LogURI  string            `json:"-"`
+	Address string            `json:"address"`
 }
 
 // Container mimics a `docker container inspect` object.
@@ -307,7 +313,7 @@ func ContainerFromNative(n *native.Container) (*Container, error) {
 		// c.HostConfig.LogConfig.Config = map[string]string{}
 	}
 	if logConfigJSON, ok := n.Labels[labels.LogConfig]; ok {
-		var logConfig logging.LogConfig
+		var logConfig loggerLogConfig
 		err := json.Unmarshal([]byte(logConfigJSON), &logConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal log config: %v", err)
@@ -317,7 +323,7 @@ func ContainerFromNative(n *native.Container) (*Container, error) {
 		c.HostConfig.LogConfig.Config = logConfig
 	} else {
 		// If LogConfig label is not present, set default values
-		c.HostConfig.LogConfig.Config = logging.LogConfig{
+		c.HostConfig.LogConfig.Config = loggerLogConfig{
 			Driver: "json-file",
 			Opts:   make(map[string]string),
 		}
