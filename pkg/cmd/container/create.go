@@ -659,6 +659,9 @@ type internalLabels struct {
 
 	// label to check if --group-add is set
 	groupAdd []string
+
+	// label for device mapping set by the --device flag
+	deviceMapping []string
 }
 
 // WithInternalLabels sets the internal labels for a container.
@@ -759,7 +762,7 @@ func withInternalLabels(internalLabels internalLabels) (containerd.NewContainerO
 		if err != nil {
 			return nil, err
 		}
-		m[labels.DnsServer] = string(dnsServersJSON)
+		m[labels.DNSServer] = string(dnsServersJSON)
 	}
 
 	if len(internalLabels.dnsSearchDomains) > 0 {
@@ -776,6 +779,14 @@ func withInternalLabels(internalLabels internalLabels) (containerd.NewContainerO
 			return nil, err
 		}
 		m[labels.DNSResolvConfOptions] = string(dnsResolvConfOptionsJSON)
+	}
+
+	if len(internalLabels.deviceMapping) > 0 {
+		devicesJSON, err := json.Marshal(internalLabels.deviceMapping)
+		if err != nil {
+			return nil, err
+		}
+		m[labels.DeviceMapping] = string(devicesJSON)
 	}
 
 	return containerd.WithAdditionalContainerLabels(m), nil
