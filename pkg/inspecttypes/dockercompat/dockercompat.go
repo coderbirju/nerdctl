@@ -164,7 +164,7 @@ type HostConfig struct {
 	Runtime         string            // Runtime to use with this container
 	Devices         []string          // List of devices to map inside the container
 	PidMode         string            // PID namespace to use for the container
-	Tmpfs           []MountPoint      `json:",omitempty"` // List of tmpfs (mounts) used for the container
+	Tmpfs           map[string]string `json:"Tmpfs,omitempty"` // List of tmpfs (mounts) used for the container
 }
 
 // From https://github.com/moby/moby/blob/v20.10.1/api/types/types.go#L416-L427
@@ -335,22 +335,18 @@ func ContainerFromNative(n *native.Container) (*Container, error) {
 		}
 	}
 
-	var tmpfsMounts []MountPoint
-
 	if nerdctlMounts := n.Labels[labels.Mounts]; nerdctlMounts != "" {
 		mounts, err := parseMounts(nerdctlMounts)
 		if err != nil {
 			return nil, err
 		}
 		c.Mounts = mounts
-		if len(mounts) > 0 {
-			tmpfsMounts = mounts
-			// filterTmpfsMounts(mounts)
+		for _, mount := range mounts {
+			if mount.Type == "tmpfs" {
+				c.HostConfig.Tmpfs[mount.Destination] = mount.Mode
+			}
 		}
 	}
-	// if len(tmpfsMounts) > 0 {
-	c.HostConfig.Tmpfs = tmpfsMounts
-	// }
 
 	if nedctlExtraHosts := n.Labels[labels.ExtraHosts]; nedctlExtraHosts != "" {
 		c.HostConfig.ExtraHosts = parseExtraHosts(nedctlExtraHosts)

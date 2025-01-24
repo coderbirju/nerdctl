@@ -62,6 +62,7 @@ func TestContainerInspectContainsMounts(t *testing.T) {
 		"--name", testContainer,
 		"--network", "none",
 		"-v", "/anony-vol",
+		"--tmpfs", "/app1:size=64m",
 		"--mount", "type=bind,src=/tmp,dst=/app2,ro",
 		"--mount", fmt.Sprintf("type=volume,src=%s,dst=/app3,readonly=false", testVolume),
 		testutil.NginxAlpineImage).AssertOK()
