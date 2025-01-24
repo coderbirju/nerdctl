@@ -562,18 +562,6 @@ func mountsFromNative(spMounts []specs.Mount) []MountPoint {
 	return mountpoints
 }
 
-// filterTmpfsMounts filters the tmpfs mounts
-func filterTmpfsMounts(spMounts []MountPoint) []MountPoint {
-	mountpoints := make([]MountPoint, 0, len(spMounts))
-	for _, m := range spMounts {
-		if m.Type == "tmpfs" {
-			mountpoints = append(mountpoints, m)
-		}
-	}
-
-	return mountpoints
-}
-
 func statusFromNative(x containerd.Status, labels map[string]string) string {
 	switch s := x.Status; s {
 	case containerd.Stopped:

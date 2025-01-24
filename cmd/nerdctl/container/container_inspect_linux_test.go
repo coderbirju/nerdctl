@@ -248,9 +248,16 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		"--add-host", "host2:10.0.0.2",
 		"--ipc", "host",
 		"--memory", "512m",
+		"--read-only",
+		"--shm-size", "256m",
+		"--uts", "host",
+		"--device", "/dev/null:/dev/null",
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
+
+	// "--runtime", "io.containerd.runtime.v1.linux",
+	// 	"--sysctl", "net.core.somaxconn=1024",
 
 	assert.Equal(t, "0-1", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "0", inspect.HostConfig.CPUSetMems)
@@ -261,7 +268,6 @@ func TestContainerInspectHostConfig(t *testing.T) {
 	expectedExtraHosts := []string{"host1:10.0.0.1", "host2:10.0.0.2"}
 	assert.DeepEqual(t, expectedExtraHosts, inspect.HostConfig.ExtraHosts)
 	assert.Equal(t, "host", inspect.HostConfig.IpcMode)
-	t.Logf("Actual LogConfig.Driver: %s", inspect.HostConfig.LogConfig.Driver)
 	assert.Equal(t, "", inspect.HostConfig.LogConfig.Driver)
 	assert.Equal(t, int64(536870912), inspect.HostConfig.Memory)
 	assert.Equal(t, int64(1073741824), inspect.HostConfig.MemorySwap)
@@ -399,13 +405,6 @@ func TestContainerInspectHostConfigPIDDefaults(t *testing.T) {
 	// Check that PID mode is empty (private) by default
 	assert.Equal(t, "", inspect.HostConfig.PidMode)
 }
-
-// //"--read-only",
-// "--uts", "host",
-// "--shm-size", "256m",
-// "--runtime", "io.containerd.runtime.v1.linux",
-// "--sysctl", "net.core.somaxconn=1024",
-// "--device", "/dev/null:/dev/null",
 
 // assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
 // 	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
