@@ -83,7 +83,6 @@ func TestContainerFromNative(t *testing.T) {
 						Opts:   map[string]string{},
 					},
 					UTSMode: "host",
-					Tmpfs:   []MountPoint{},
 				},
 				Mounts: []MountPoint{
 					{

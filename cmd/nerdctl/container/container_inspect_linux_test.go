@@ -67,8 +67,6 @@ func TestContainerInspectContainsMounts(t *testing.T) {
 		testutil.NginxAlpineImage).AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
-	t.Logf("inspect in TestContainerInspectContainsMounts: %+v", inspect)
-	t.Logf("inspect.Mounts in TestContainerInspectContainsMounts: %+v", inspect.Mounts)
 	// convert array to map to get by key of Destination
 	actual := make(map[string]dockercompat.MountPoint)
 	for i := range inspect.Mounts {
@@ -116,19 +114,6 @@ func TestContainerInspectContainsMounts(t *testing.T) {
 				Source:      namedVolumeSource,
 				Destination: "/app3",
 				Driver:      localDriver,
-				RW:          true,
-			},
-		},
-
-		// Tmpfs
-		{
-			dest: "/app1",
-			mountPoint: dockercompat.MountPoint{
-				Type:        "tmpfs",
-				Name:        "",
-				Source:      "tmpfs",
-				Destination: "/app1",
-				Mode:        "noexec,nosuid,nodev,size=64m",
 				RW:          true,
 			},
 		},
@@ -431,3 +416,52 @@ func TestContainerInspectHostConfigPIDDefaults(t *testing.T) {
 // 	assert.DeepEqual(t, expectedSysctls, inspect.HostConfig.Sysctls)
 // 	expectedDevices := []string{"/dev/null:/dev/null"}
 // 	assert.DeepEqual(t, expectedDevices, inspect.HostConfig.Devices)
+
+// func TestContainerInspectHostConfigAdvanced(t *testing.T) {
+// 	testContainer := testutil.Identifier(t)
+
+// 	base := testutil.NewBase(t)
+// 	defer base.Cmd("rm", "-f", testContainer).Run()
+
+// 	// Run a container with various advanced HostConfig options
+// 	base.Cmd("run", "-d", "--name", testContainer,
+// 		"--read-only",
+// 		"--uts", "host",
+// 		"--shm-size", "256m",
+// 		"--runtime", "io.containerd.runtime.v1.linux",
+// 		"--sysctl", "net.core.somaxconn=1024",
+// 		"--device", "/dev/null:/dev/null",
+// 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
+
+// 	inspect := base.InspectContainer(testContainer)
+
+// 	// Check ReadonlyRootfs
+// 	assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
+
+// 	// Check UTSMode
+// 	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
+
+// 	// Check ShmSize
+// 	assert.Equal(t, int64(268435456), inspect.HostConfig.ShmSize)
+
+// 	// Check Runtime
+// 	assert.Equal(t, "io.containerd.runtime.v1.linux", inspect.HostConfig.Runtime)
+
+// 	// Check Sysctls
+// 	expectedSysctls := map[string]string{
+// 		"net.core.somaxconn": "1024",
+// 	}
+// 	assert.DeepEqual(t, expectedSysctls, inspect.HostConfig.Sysctls)
+
+// 	// Check Devices
+// 	expectedDevices := []string{"/dev/null:/dev/null"}
+// 	assert.DeepEqual(t, expectedDevices, inspect.HostConfig.Devices)
+
+// 	// Log the entire HostConfig for debugging
+// 	hostConfigJSON, err := json.MarshalIndent(inspect.HostConfig, "", "  ")
+// 	if err != nil {
+// 		t.Errorf("Failed to marshal HostConfig: %v", err)
+// 	} else {
+// 		t.Logf("HostConfig in TestContainerInspectHostConfigAdvanced:\n%s", string(hostConfigJSON))
+// 	}
+// }

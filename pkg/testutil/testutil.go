@@ -216,6 +216,9 @@ func (b *Base) InspectContainer(name string) dockercompat.Container {
 	cmdResult := b.Cmd("container", "inspect", name).Run()
 	assert.Equal(b.T, cmdResult.ExitCode, 0)
 	var dc []dockercompat.Container
+	b.T.Log("==========")
+	b.T.Log(cmdResult.Stdout())
+	b.T.Log("==========")
 	if err := json.Unmarshal([]byte(cmdResult.Stdout()), &dc); err != nil {
 		b.T.Fatal(err)
 	}

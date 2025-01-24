@@ -344,10 +344,13 @@ func ContainerFromNative(n *native.Container) (*Container, error) {
 		}
 		c.Mounts = mounts
 		if len(mounts) > 0 {
-			tmpfsMounts = filterTmpfsMounts(mounts)
+			tmpfsMounts = mounts
+			// filterTmpfsMounts(mounts)
 		}
 	}
+	// if len(tmpfsMounts) > 0 {
 	c.HostConfig.Tmpfs = tmpfsMounts
+	// }
 
 	if nedctlExtraHosts := n.Labels[labels.ExtraHosts]; nedctlExtraHosts != "" {
 		c.HostConfig.ExtraHosts = parseExtraHosts(nedctlExtraHosts)
