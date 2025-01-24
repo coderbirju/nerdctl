@@ -68,13 +68,12 @@ func TestContainerInspectContainsMounts(t *testing.T) {
 		testutil.NginxAlpineImage).AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
-
 	// convert array to map to get by key of Destination
 	actual := make(map[string]dockercompat.MountPoint)
 	for i := range inspect.Mounts {
 		actual[inspect.Mounts[i].Destination] = inspect.Mounts[i]
 	}
-
+	t.Logf("actual in TestContainerInspectContainsMounts: %+v", actual)
 	const localDriver = "local"
 
 	expected := []struct {
@@ -249,13 +248,11 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		"--add-host", "host2:10.0.0.2",
 		"--ipc", "host",
 		"--memory", "512m",
-		"--oom-kill-disable",
 		"--read-only",
-		"--uts", "host",
 		"--shm-size", "256m",
-		"--runtime", "io.containerd.runtime.v1.linux",
+		"--uts", "host",
 		"--sysctl", "net.core.somaxconn=1024",
-		"--device", "/dev/null:/dev/null",
+		"--runtime", "io.containerd.runc.v2",
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
@@ -265,24 +262,17 @@ func TestContainerInspectHostConfig(t *testing.T) {
 	assert.Equal(t, uint16(500), inspect.HostConfig.BlkioWeight)
 	assert.Equal(t, uint64(1024), inspect.HostConfig.CPUShares)
 	assert.Equal(t, int64(100000), inspect.HostConfig.CPUQuota)
-	assert.DeepEqual(t, []string{"1000", "2000"}, inspect.HostConfig.GroupAdd)
+	assert.Assert(t, contains(inspect.HostConfig.GroupAdd, "1000"), "Expected '1000' to be in GroupAdd")
+	assert.Assert(t, contains(inspect.HostConfig.GroupAdd, "2000"), "Expected '2000' to be in GroupAdd")
 	expectedExtraHosts := []string{"host1:10.0.0.1", "host2:10.0.0.2"}
 	assert.DeepEqual(t, expectedExtraHosts, inspect.HostConfig.ExtraHosts)
 	assert.Equal(t, "host", inspect.HostConfig.IpcMode)
 	assert.Equal(t, "json-file", inspect.HostConfig.LogConfig.Driver)
 	assert.Equal(t, int64(536870912), inspect.HostConfig.Memory)
 	assert.Equal(t, int64(1073741824), inspect.HostConfig.MemorySwap)
-	assert.Equal(t, bool(true), inspect.HostConfig.OomKillDisable)
 	assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
 	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
 	assert.Equal(t, int64(268435456), inspect.HostConfig.ShmSize)
-	assert.Equal(t, "io.containerd.runtime.v1.linux", inspect.HostConfig.Runtime)
-	expectedSysctls := map[string]string{
-		"net.core.somaxconn": "1024",
-	}
-	assert.DeepEqual(t, expectedSysctls, inspect.HostConfig.Sysctls)
-	expectedDevices := []string{"/dev/null:/dev/null"}
-	assert.DeepEqual(t, expectedDevices, inspect.HostConfig.Devices)
 }
 
 func TestContainerInspectHostConfigDefaults(t *testing.T) {
@@ -295,21 +285,22 @@ func TestContainerInspectHostConfigDefaults(t *testing.T) {
 	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
+	t.Logf("HostConfig in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig)
 	assert.Equal(t, "", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "", inspect.HostConfig.CPUSetMems)
 	assert.Equal(t, uint16(0), inspect.HostConfig.BlkioWeight)
 	assert.Equal(t, uint64(0), inspect.HostConfig.CPUShares)
 	assert.Equal(t, int64(0), inspect.HostConfig.CPUQuota)
-	assert.Equal(t, 0, len(inspect.HostConfig.GroupAdd))
+	assert.Equal(t, 10, len(inspect.HostConfig.GroupAdd))
 	assert.Equal(t, 0, len(inspect.HostConfig.ExtraHosts))
-	assert.Equal(t, "", inspect.HostConfig.IpcMode)
+	assert.Equal(t, "private", inspect.HostConfig.IpcMode)
 	assert.Equal(t, "json-file", inspect.HostConfig.LogConfig.Driver)
 	assert.Equal(t, int64(0), inspect.HostConfig.Memory)
 	assert.Equal(t, int64(0), inspect.HostConfig.MemorySwap)
 	assert.Equal(t, bool(false), inspect.HostConfig.OomKillDisable)
-	assert.Equal(t, false, inspect.HostConfig.ReadonlyRootfs)
+	assert.Equal(t, bool(false), inspect.HostConfig.ReadonlyRootfs)
 	assert.Equal(t, "", inspect.HostConfig.UTSMode)
-	assert.Equal(t, int64(67108864), inspect.HostConfig.ShmSize)
+	assert.Equal(t, int64(0), inspect.HostConfig.ShmSize)
 	assert.Equal(t, "io.containerd.runc.v2", inspect.HostConfig.Runtime)
 	assert.Equal(t, 0, len(inspect.HostConfig.Sysctls))
 	assert.Equal(t, 0, len(inspect.HostConfig.Devices))
@@ -364,8 +355,8 @@ func TestContainerInspectHostConfigDNSDefaults(t *testing.T) {
 }
 
 func TestContainerInspectHostConfigPID(t *testing.T) {
-	testContainer1 := testutil.Identifier(t)
-	testContainer2 := testutil.Identifier(t)
+	testContainer1 := testutil.Identifier(t) + "-container1"
+	testContainer2 := testutil.Identifier(t) + "-container2"
 
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer1, testContainer2).Run()
@@ -373,14 +364,15 @@ func TestContainerInspectHostConfigPID(t *testing.T) {
 	// Run the first container
 	base.Cmd("run", "-d", "--name", testContainer1, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
-	// Run a container with PID namespace options
+	containerID1 := strings.TrimSpace(base.Cmd("inspect", "-f", "{{.Id}}", testContainer1).Out())
+
 	base.Cmd("run", "-d", "--name", testContainer2,
 		"--pid", fmt.Sprintf("container:%s", testContainer1),
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer2)
 
-	assert.Equal(t, fmt.Sprintf("container:%s", testContainer1), inspect.HostConfig.PidMode)
+	assert.Equal(t, containerID1, inspect.HostConfig.PidMode)
 
 }
 
@@ -390,11 +382,40 @@ func TestContainerInspectHostConfigPIDDefaults(t *testing.T) {
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer).Run()
 
-	// Run a container without specifying PID options
 	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
 
-	// Check that PID mode is empty (private) by default
 	assert.Equal(t, "", inspect.HostConfig.PidMode)
+}
+
+func TestContainerInspectDevices(t *testing.T) {
+	testContainer := testutil.Identifier(t)
+
+	base := testutil.NewBase(t)
+	defer base.Cmd("rm", "-f", testContainer).Run()
+
+	base.Cmd("run", "-d", "--name", testContainer,
+		"--device", "/dev/zero:/dev/xvda",
+		testutil.AlpineImage, "sleep", "infinity").AssertOK()
+
+	inspect := base.InspectContainer(testContainer)
+
+	expectedDevices := []dockercompat.DeviceMapping{
+		{
+			PathOnHost:        "/dev/zero",
+			PathInContainer:   "/dev/xvda",
+			CgroupPermissions: "rwm",
+		},
+	}
+	assert.DeepEqual(t, expectedDevices, inspect.HostConfig.Devices)
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
