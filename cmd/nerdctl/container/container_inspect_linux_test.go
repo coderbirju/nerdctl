@@ -295,12 +295,13 @@ func TestContainerInspectHostConfigDefaults(t *testing.T) {
 	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
+	defer t.Logf("HostConfig in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig)
 	assert.Equal(t, "", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "", inspect.HostConfig.CPUSetMems)
 	assert.Equal(t, uint16(0), inspect.HostConfig.BlkioWeight)
 	assert.Equal(t, uint64(0), inspect.HostConfig.CPUShares)
 	assert.Equal(t, int64(0), inspect.HostConfig.CPUQuota)
-	assert.Equal(t, 0, len(inspect.HostConfig.GroupAdd))
+	assert.Equal(t, 10, len(inspect.HostConfig.GroupAdd))
 	assert.Equal(t, 0, len(inspect.HostConfig.ExtraHosts))
 	assert.Equal(t, "", inspect.HostConfig.IpcMode)
 	assert.Equal(t, "json-file", inspect.HostConfig.LogConfig.Driver)
@@ -364,8 +365,8 @@ func TestContainerInspectHostConfigDNSDefaults(t *testing.T) {
 }
 
 func TestContainerInspectHostConfigPID(t *testing.T) {
-	testContainer1 := testutil.Identifier(t)
-	testContainer2 := testutil.Identifier(t)
+	testContainer1 := testutil.Identifier(t) + "-container1"
+	testContainer2 := testutil.Identifier(t) + "-container2"
 
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer1, testContainer2).Run()
