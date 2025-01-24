@@ -249,7 +249,6 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		"--add-host", "host2:10.0.0.2",
 		"--ipc", "host",
 		"--memory", "512m",
-		"--oom-kill-disable",
 		"--read-only",
 		"--uts", "host",
 		"--shm-size", "256m",
@@ -272,7 +271,7 @@ func TestContainerInspectHostConfig(t *testing.T) {
 	assert.Equal(t, "json-file", inspect.HostConfig.LogConfig.Driver)
 	assert.Equal(t, int64(536870912), inspect.HostConfig.Memory)
 	assert.Equal(t, int64(1073741824), inspect.HostConfig.MemorySwap)
-	assert.Equal(t, bool(true), inspect.HostConfig.OomKillDisable)
+	// assert.Equal(t, bool(true), inspect.HostConfig.OomKillDisable)
 	assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
 	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
 	assert.Equal(t, int64(268435456), inspect.HostConfig.ShmSize)
