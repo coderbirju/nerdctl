@@ -294,8 +294,8 @@ func TestContainerInspectHostConfigDefaults(t *testing.T) {
 	// Run a container without specifying HostConfig options
 	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
-	t.Logf("HostConfig in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig)
 	inspect := base.InspectContainer(testContainer)
+	t.Logf("HostConfig in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig)
 	t.Logf("inspect.HostConfig.CPUSetCPUs in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "", inspect.HostConfig.CPUSetCPUs)
 	t.Logf("inspect.HostConfig.CPUSetMems in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetMems)
