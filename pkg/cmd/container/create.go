@@ -224,6 +224,9 @@ func Create(ctx context.Context, client *containerd.Client, args []string, netMa
 	}
 	internalLabels.logURI = logConfig.LogURI
 	internalLabels.logConfig = logConfig
+	if logConfig.Driver == "" && logConfig.Address == options.GOptions.Address {
+		internalLabels.logConfig.Driver = "json-file"
+	}
 
 	restartOpts, err := generateRestartOpts(ctx, client, options.Restart, logConfig.LogURI, options.InRun)
 	if err != nil {

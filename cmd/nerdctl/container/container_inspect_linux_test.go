@@ -294,26 +294,26 @@ func TestContainerInspectHostConfigDefaults(t *testing.T) {
 	// Run a container without specifying HostConfig options
 	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
-	inspect := base.InspectContainer(testContainer)
 	t.Logf("HostConfig in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig)
-	assert.Equal(t, "", inspect.HostConfig.CPUSetCPUs)
+	inspect := base.InspectContainer(testContainer)
 	t.Logf("inspect.HostConfig.CPUSetCPUs in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetCPUs)
-	assert.Equal(t, "", inspect.HostConfig.CPUSetMems)
+	assert.Equal(t, "", inspect.HostConfig.CPUSetCPUs)
 	t.Logf("inspect.HostConfig.CPUSetMems in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetMems)
-	assert.Equal(t, uint16(0), inspect.HostConfig.BlkioWeight)
+	assert.Equal(t, "", inspect.HostConfig.CPUSetMems)
 	t.Logf("inspect.HostConfig.BlkioWeight in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.BlkioWeight)
-	assert.Equal(t, uint64(0), inspect.HostConfig.CPUShares)
+	assert.Equal(t, uint16(0), inspect.HostConfig.BlkioWeight)
 	t.Logf("inspect.HostConfig.CPUShares in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUShares)
-	assert.Equal(t, int64(0), inspect.HostConfig.CPUQuota)
+	assert.Equal(t, uint64(0), inspect.HostConfig.CPUShares)
 	t.Logf("inspect.HostConfig.CPUQuota in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUQuota)
-	assert.Equal(t, 0, len(inspect.HostConfig.GroupAdd))
+	assert.Equal(t, int64(0), inspect.HostConfig.CPUQuota)
 	t.Logf("len(inspect.HostConfig.GroupAdd) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.GroupAdd))
-	assert.Equal(t, 0, len(inspect.HostConfig.ExtraHosts))
+	assert.Equal(t, 0, len(inspect.HostConfig.GroupAdd))
 	t.Logf("len(inspect.HostConfig.ExtraHosts) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.ExtraHosts))
-	assert.Equal(t, "private", inspect.HostConfig.IpcMode)
+	assert.Equal(t, 0, len(inspect.HostConfig.ExtraHosts))
 	t.Logf("inspect.HostConfig.IpcMode in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.IpcMode)
-	assert.Equal(t, "json-file", inspect.HostConfig.LogConfig.Driver)
+	assert.Equal(t, "private", inspect.HostConfig.IpcMode)
 	t.Logf("inspect.HostConfig.LogConfig.Driver in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.LogConfig.Driver)
+	assert.Equal(t, "json-file", inspect.HostConfig.LogConfig.Driver)
 
 	assert.Equal(t, int64(0), inspect.HostConfig.Memory)
 	t.Logf("inspect.HostConfig.Memory in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.Memory)
@@ -389,6 +389,8 @@ func TestContainerInspectHostConfigPID(t *testing.T) {
 	// Run the first container
 	base.Cmd("run", "-d", "--name", testContainer1, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
+	container1ID := strings.TrimSpace(base.Cmd("inspect", "-f", "{{.Id}}", testContainer1).Out())
+
 	// Run a container with PID namespace options
 	base.Cmd("run", "-d", "--name", testContainer2,
 		"--pid", fmt.Sprintf("container:%s", testContainer1),
@@ -396,7 +398,7 @@ func TestContainerInspectHostConfigPID(t *testing.T) {
 
 	inspect := base.InspectContainer(testContainer2)
 
-	assert.Equal(t, fmt.Sprintf("container:%s", testContainer1), inspect.HostConfig.PidMode)
+	assert.Equal(t, fmt.Sprintf("container:%s", container1ID), inspect.HostConfig.PidMode)
 
 }
 
