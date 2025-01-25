@@ -773,7 +773,18 @@ func withInternalLabels(internalLabels internalLabels) (containerd.NewContainerO
 	}
 
 	if len(internalLabels.deviceMapping) > 0 {
-		hostConfigLabel.DeviceMapping = internalLabels.deviceMapping
+		for i := range internalLabels.deviceMapping {
+			var deviceMapping dockercompat.DeviceMapping
+			device := internalLabels.deviceMapping[i]
+			devPath, conPath, mode, err := ParseDevice(device)
+			if err != nil {
+				return nil, err
+			}
+			deviceMapping.CgroupPermissions = mode
+			deviceMapping.PathInContainer = conPath
+			deviceMapping.PathOnHost = devPath
+			hostConfigLabel.Devices = append(hostConfigLabel.Devices, deviceMapping)
+		}
 	}
 
 	hostConfigJSON, err := json.Marshal(hostConfigLabel)

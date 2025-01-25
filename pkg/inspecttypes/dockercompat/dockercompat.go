@@ -162,7 +162,7 @@ type HostConfig struct {
 	ShmSize         int64             // Size of /dev/shm in bytes. The size must be greater than 0.
 	Sysctls         map[string]string // List of Namespaced sysctls used for the container
 	Runtime         string            // Runtime to use with this container
-	Devices         []string          // List of devices to map inside the container
+	Devices         []DeviceMapping   // List of devices to map inside the container
 	PidMode         string            // PID namespace to use for the container
 	Tmpfs           map[string]string `json:"Tmpfs,omitempty"` // List of tmpfs (mounts) used for the container
 }
@@ -239,9 +239,15 @@ type DNSSettings struct {
 }
 
 type HostConfigLabel struct {
-	BlkioWeight   uint16
-	CidFile       string
-	DeviceMapping []string
+	BlkioWeight uint16
+	CidFile     string
+	Devices     []DeviceMapping
+}
+
+type DeviceMapping struct {
+	PathOnHost        string
+	PathInContainer   string
+	CgroupPermissions string
 }
 
 type CPUSettings struct {
@@ -485,7 +491,7 @@ func ContainerFromNative(n *native.Container) (*Container, error) {
 	}
 	c.Config.Hostname = hostname
 
-	c.HostConfig.Devices = hostConfigLabel.DeviceMapping
+	c.HostConfig.Devices = hostConfigLabel.Devices
 
 	var pidMode string
 	if n.Labels[labels.PIDContainer] != "" {
