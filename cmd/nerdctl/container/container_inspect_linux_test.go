@@ -255,7 +255,9 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
-
+	t.Log("==========")
+	t.Log(inspect.HostConfig)
+	t.Log("==========")
 	// "--runtime", "io.containerd.runtime.v1.linux",
 	// 	"--sysctl", "net.core.somaxconn=1024",
 
@@ -271,6 +273,13 @@ func TestContainerInspectHostConfig(t *testing.T) {
 	assert.Equal(t, "", inspect.HostConfig.LogConfig.Driver)
 	assert.Equal(t, int64(536870912), inspect.HostConfig.Memory)
 	assert.Equal(t, int64(1073741824), inspect.HostConfig.MemorySwap)
+	assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
+	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
+	assert.Equal(t, int64(268435456), inspect.HostConfig.ShmSize)
+	// assert.Equal(t, "io.containerd.runtime.v1.linux", inspect.HostConfig.Runtime)
+	// expectedSysctls := map[string]string{
+	// 	"net.core.somaxconn": "1024",
+	// }
 	// assert.Equal(t, bool(true), inspect.HostConfig.OomKillDisable)
 }
 
