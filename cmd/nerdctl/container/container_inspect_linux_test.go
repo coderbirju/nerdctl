@@ -253,6 +253,7 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		"--uts", "host",
 		"--device", "/dev/null:/dev/null",
 		"--sysctl", "net.core.somaxconn=1024",
+		"--runtime", "io.containerd.runc.v2",
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
@@ -260,7 +261,6 @@ func TestContainerInspectHostConfig(t *testing.T) {
 	t.Log(inspect.HostConfig)
 	t.Log("==========")
 	// "--runtime", "io.containerd.runtime.v1.linux",
-	// 	"--sysctl", "net.core.somaxconn=1024",
 
 	assert.Equal(t, "0-1", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "0", inspect.HostConfig.CPUSetMems)
@@ -284,51 +284,51 @@ func TestContainerInspectHostConfig(t *testing.T) {
 	// assert.Equal(t, bool(true), inspect.HostConfig.OomKillDisable)
 }
 
-// func TestContainerInspectHostConfigDefaults(t *testing.T) {
-// 	testContainer := testutil.Identifier(t)
+func TestContainerInspectHostConfigDefaults(t *testing.T) {
+	testContainer := testutil.Identifier(t)
 
-// 	base := testutil.NewBase(t)
-// 	defer base.Cmd("rm", "-f", testContainer).Run()
+	base := testutil.NewBase(t)
+	defer base.Cmd("rm", "-f", testContainer).Run()
 
-// 	// Run a container without specifying HostConfig options
-// 	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
+	// Run a container without specifying HostConfig options
+	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
-// 	inspect := base.InspectContainer(testContainer)
-// 	t.Logf("HostConfig in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig)
-// 	t.Logf("inspect.HostConfig.CPUSetCPUs in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetCPUs)
-// 	assert.Equal(t, "", inspect.HostConfig.CPUSetCPUs)
-// 	t.Logf("inspect.HostConfig.CPUSetMems in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetMems)
-// 	assert.Equal(t, "", inspect.HostConfig.CPUSetMems)
-// 	t.Logf("inspect.HostConfig.BlkioWeight in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.BlkioWeight)
-// 	assert.Equal(t, uint16(0), inspect.HostConfig.BlkioWeight)
-// 	t.Logf("inspect.HostConfig.CPUShares in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUShares)
-// 	assert.Equal(t, uint64(0), inspect.HostConfig.CPUShares)
-// 	t.Logf("inspect.HostConfig.CPUQuota in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUQuota)
-// 	assert.Equal(t, int64(0), inspect.HostConfig.CPUQuota)
-// 	t.Logf("len(inspect.HostConfig.GroupAdd) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.GroupAdd))
-// 	assert.Equal(t, 0, len(inspect.HostConfig.GroupAdd))
-// 	t.Logf("len(inspect.HostConfig.ExtraHosts) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.ExtraHosts))
-// 	assert.Equal(t, 0, len(inspect.HostConfig.ExtraHosts))
-// 	t.Logf("inspect.HostConfig.IpcMode in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.IpcMode)
-// 	assert.Equal(t, "private", inspect.HostConfig.IpcMode)
-// 	t.Logf("inspect.HostConfig.LogConfig.Driver in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.LogConfig.Driver)
-// 	assert.Equal(t, "", inspect.HostConfig.LogConfig.Driver)
+	inspect := base.InspectContainer(testContainer)
+	t.Logf("HostConfig in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig)
+	t.Logf("inspect.HostConfig.CPUSetCPUs in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetCPUs)
+	assert.Equal(t, "", inspect.HostConfig.CPUSetCPUs)
+	t.Logf("inspect.HostConfig.CPUSetMems in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUSetMems)
+	assert.Equal(t, "", inspect.HostConfig.CPUSetMems)
+	t.Logf("inspect.HostConfig.BlkioWeight in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.BlkioWeight)
+	assert.Equal(t, uint16(0), inspect.HostConfig.BlkioWeight)
+	t.Logf("inspect.HostConfig.CPUShares in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUShares)
+	assert.Equal(t, uint64(0), inspect.HostConfig.CPUShares)
+	t.Logf("inspect.HostConfig.CPUQuota in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.CPUQuota)
+	assert.Equal(t, int64(0), inspect.HostConfig.CPUQuota)
+	t.Logf("len(inspect.HostConfig.GroupAdd) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.GroupAdd))
+	assert.Equal(t, 0, len(inspect.HostConfig.GroupAdd))
+	t.Logf("len(inspect.HostConfig.ExtraHosts) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.ExtraHosts))
+	assert.Equal(t, 0, len(inspect.HostConfig.ExtraHosts))
+	t.Logf("inspect.HostConfig.IpcMode in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.IpcMode)
+	assert.Equal(t, "private", inspect.HostConfig.IpcMode)
+	t.Logf("inspect.HostConfig.LogConfig.Driver in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.LogConfig.Driver)
+	assert.Equal(t, "", inspect.HostConfig.LogConfig.Driver)
 
-// 	assert.Equal(t, int64(0), inspect.HostConfig.Memory)
-// 	t.Logf("inspect.HostConfig.Memory in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.Memory)
-// 	assert.Equal(t, int64(0), inspect.HostConfig.MemorySwap)
-// 	t.Logf("inspect.HostConfig.MemorySwap in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.MemorySwap)
-// 	assert.Equal(t, bool(false), inspect.HostConfig.OomKillDisable)
-// 	t.Logf("inspect.HostConfig.OomKillDisable in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.OomKillDisable)
-// 	assert.Equal(t, bool(false), inspect.HostConfig.ReadonlyRootfs)
-// 	assert.Equal(t, "", inspect.HostConfig.UTSMode)
-// 	assert.Equal(t, int64(67108864), inspect.HostConfig.ShmSize)
-// 	assert.Equal(t, "io.containerd.runc.v2", inspect.HostConfig.Runtime)
-// 	assert.Equal(t, 0, len(inspect.HostConfig.Sysctls))
-// 	t.Logf("len(inspect.HostConfig.Sysctls) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.Sysctls))
-// 	assert.Equal(t, 0, len(inspect.HostConfig.Devices))
-// 	t.Logf("len(inspect.HostConfig.Devices) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.Devices))
-// }
+	// assert.Equal(t, int64(0), inspect.HostConfig.Memory)
+	// t.Logf("inspect.HostConfig.Memory in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.Memory)
+	// assert.Equal(t, int64(0), inspect.HostConfig.MemorySwap)
+	// t.Logf("inspect.HostConfig.MemorySwap in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.MemorySwap)
+	// assert.Equal(t, bool(false), inspect.HostConfig.OomKillDisable)
+	// t.Logf("inspect.HostConfig.OomKillDisable in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.OomKillDisable)
+	// assert.Equal(t, bool(false), inspect.HostConfig.ReadonlyRootfs)
+	// assert.Equal(t, "", inspect.HostConfig.UTSMode)
+	// assert.Equal(t, int64(67108864), inspect.HostConfig.ShmSize)
+	// assert.Equal(t, "io.containerd.runc.v2", inspect.HostConfig.Runtime)
+	// assert.Equal(t, 0, len(inspect.HostConfig.Sysctls))
+	// t.Logf("len(inspect.HostConfig.Sysctls) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.Sysctls))
+	// assert.Equal(t, 0, len(inspect.HostConfig.Devices))
+	// t.Logf("len(inspect.HostConfig.Devices) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.Devices))
+}
 
 func TestContainerInspectHostConfigDNS(t *testing.T) {
 	testContainer := testutil.Identifier(t)
