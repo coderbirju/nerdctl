@@ -251,16 +251,11 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		"--read-only",
 		"--shm-size", "256m",
 		"--uts", "host",
-		"--device", "/dev/null:/dev/null",
 		"--sysctl", "net.core.somaxconn=1024",
 		"--runtime", "io.containerd.runc.v2",
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
-	t.Log("==========")
-	t.Log(inspect.HostConfig)
-	t.Log("==========")
-	// "--runtime", "io.containerd.runtime.v1.linux",
 
 	assert.Equal(t, "0-1", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "0", inspect.HostConfig.CPUSetMems)
@@ -277,11 +272,6 @@ func TestContainerInspectHostConfig(t *testing.T) {
 	assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
 	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
 	assert.Equal(t, int64(268435456), inspect.HostConfig.ShmSize)
-	// assert.Equal(t, "io.containerd.runtime.v1.linux", inspect.HostConfig.Runtime)
-	// expectedSysctls := map[string]string{
-	// 	"net.core.somaxconn": "1024",
-	// }
-	// assert.Equal(t, bool(true), inspect.HostConfig.OomKillDisable)
 }
 
 func TestContainerInspectHostConfigDefaults(t *testing.T) {
@@ -305,19 +295,14 @@ func TestContainerInspectHostConfigDefaults(t *testing.T) {
 	assert.Equal(t, "private", inspect.HostConfig.IpcMode)
 	assert.Equal(t, "", inspect.HostConfig.LogConfig.Driver)
 	assert.Equal(t, int64(0), inspect.HostConfig.Memory)
-	t.Logf("inspect.HostConfig.Memory in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.Memory)
 	assert.Equal(t, int64(0), inspect.HostConfig.MemorySwap)
-	t.Logf("inspect.HostConfig.MemorySwap in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.MemorySwap)
 	assert.Equal(t, bool(false), inspect.HostConfig.OomKillDisable)
-	t.Logf("inspect.HostConfig.OomKillDisable in TestContainerInspectHostConfigDefaults: %+v", inspect.HostConfig.OomKillDisable)
 	assert.Equal(t, bool(false), inspect.HostConfig.ReadonlyRootfs)
 	assert.Equal(t, "", inspect.HostConfig.UTSMode)
 	assert.Equal(t, int64(67108864), inspect.HostConfig.ShmSize)
 	assert.Equal(t, "runc", inspect.HostConfig.Runtime)
 	assert.Equal(t, 0, len(inspect.HostConfig.Sysctls))
 	assert.Equal(t, 0, len(inspect.HostConfig.Devices))
-	// t.Logf("len(inspect.HostConfig.Sysctls) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.Sysctls))
-	// t.Logf("len(inspect.HostConfig.Devices) in TestContainerInspectHostConfigDefaults: %+v", len(inspect.HostConfig.Devices))
 }
 
 func TestContainerInspectHostConfigDNS(t *testing.T) {
@@ -378,16 +363,15 @@ func TestContainerInspectHostConfigPID(t *testing.T) {
 	// Run the first container
 	base.Cmd("run", "-d", "--name", testContainer1, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
-	container1ID := strings.TrimSpace(base.Cmd("inspect", "-f", "{{.Id}}", testContainer1).Out())
+	container1_ID := strings.TrimSpace(base.Cmd("inspect", "-f", "{{.Id}}", testContainer1).Out())
 
-	// Run a container with PID namespace options
 	base.Cmd("run", "-d", "--name", testContainer2,
 		"--pid", fmt.Sprintf("container:%s", testContainer1),
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer2)
 
-	assert.Equal(t, fmt.Sprintf("container:%s", container1ID), inspect.HostConfig.PidMode)
+	assert.Equal(t, fmt.Sprintf("container:%s", container1_ID), inspect.HostConfig.PidMode)
 
 }
 
@@ -397,71 +381,31 @@ func TestContainerInspectHostConfigPIDDefaults(t *testing.T) {
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer).Run()
 
-	// Run a container without specifying PID options
 	base.Cmd("run", "-d", "--name", testContainer, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
 
-	// Check that PID mode is empty (private) by default
 	assert.Equal(t, "", inspect.HostConfig.PidMode)
 }
 
-// assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
-// 	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
-// 	assert.Equal(t, int64(268435456), inspect.HostConfig.ShmSize)
-// 	assert.Equal(t, "io.containerd.runtime.v1.linux", inspect.HostConfig.Runtime)
-// 	expectedSysctls := map[string]string{
-// 		"net.core.somaxconn": "1024",
-// 	}
-// 	assert.DeepEqual(t, expectedSysctls, inspect.HostConfig.Sysctls)
-// 	expectedDevices := []string{"/dev/null:/dev/null"}
-// 	assert.DeepEqual(t, expectedDevices, inspect.HostConfig.Devices)
+func TestContainerInspectDevices(t *testing.T) {
+	testContainer := testutil.Identifier(t)
 
-// func TestContainerInspectHostConfigAdvanced(t *testing.T) {
-// 	testContainer := testutil.Identifier(t)
+	base := testutil.NewBase(t)
+	defer base.Cmd("rm", "-f", testContainer).Run()
 
-// 	base := testutil.NewBase(t)
-// 	defer base.Cmd("rm", "-f", testContainer).Run()
+	base.Cmd("run", "-d", "--name", testContainer,
+		"--device", "/dev/null:/dev/null",
+		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
-// 	// Run a container with various advanced HostConfig options
-// 	base.Cmd("run", "-d", "--name", testContainer,
-// 		"--read-only",
-// 		"--uts", "host",
-// 		"--shm-size", "256m",
-// 		"--runtime", "io.containerd.runtime.v1.linux",
-// 		"--sysctl", "net.core.somaxconn=1024",
-// 		"--device", "/dev/null:/dev/null",
-// 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
+	inspect := base.InspectContainer(testContainer)
 
-// 	inspect := base.InspectContainer(testContainer)
-
-// 	// Check ReadonlyRootfs
-// 	assert.Equal(t, true, inspect.HostConfig.ReadonlyRootfs)
-
-// 	// Check UTSMode
-// 	assert.Equal(t, "host", inspect.HostConfig.UTSMode)
-
-// 	// Check ShmSize
-// 	assert.Equal(t, int64(268435456), inspect.HostConfig.ShmSize)
-
-// 	// Check Runtime
-// 	assert.Equal(t, "io.containerd.runtime.v1.linux", inspect.HostConfig.Runtime)
-
-// 	// Check Sysctls
-// 	expectedSysctls := map[string]string{
-// 		"net.core.somaxconn": "1024",
-// 	}
-// 	assert.DeepEqual(t, expectedSysctls, inspect.HostConfig.Sysctls)
-
-// 	// Check Devices
-// 	expectedDevices := []string{"/dev/null:/dev/null"}
-// 	assert.DeepEqual(t, expectedDevices, inspect.HostConfig.Devices)
-
-// 	// Log the entire HostConfig for debugging
-// 	hostConfigJSON, err := json.MarshalIndent(inspect.HostConfig, "", "  ")
-// 	if err != nil {
-// 		t.Errorf("Failed to marshal HostConfig: %v", err)
-// 	} else {
-// 		t.Logf("HostConfig in TestContainerInspectHostConfigAdvanced:\n%s", string(hostConfigJSON))
-// 	}
-// }
+	expectedDevices := []dockercompat.DeviceMapping{
+		{
+			PathOnHost:        "/dev/null",
+			PathInContainer:   "/dev/null",
+			CgroupPermissions: "rwm",
+		},
+	}
+	assert.DeepEqual(t, expectedDevices, inspect.HostConfig.Devices)
+}
