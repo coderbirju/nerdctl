@@ -663,7 +663,7 @@ type internalLabels struct {
 	groupAdd []string
 
 	// label for device mapping set by the --device flag
-	deviceMapping []string
+	deviceMapping []dockercompat.DeviceMapping
 }
 
 // WithInternalLabels sets the internal labels for a container.
@@ -773,18 +773,7 @@ func withInternalLabels(internalLabels internalLabels) (containerd.NewContainerO
 	}
 
 	if len(internalLabels.deviceMapping) > 0 {
-		for i := range internalLabels.deviceMapping {
-			var deviceMapping dockercompat.DeviceMapping
-			device := internalLabels.deviceMapping[i]
-			devPath, conPath, mode, err := ParseDevice(device)
-			if err != nil {
-				return nil, err
-			}
-			deviceMapping.CgroupPermissions = mode
-			deviceMapping.PathInContainer = conPath
-			deviceMapping.PathOnHost = devPath
-			hostConfigLabel.Devices = append(hostConfigLabel.Devices, deviceMapping)
-		}
+		hostConfigLabel.Devices = append(hostConfigLabel.Devices, internalLabels.deviceMapping...)
 	}
 
 	hostConfigJSON, err := json.Marshal(hostConfigLabel)

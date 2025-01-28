@@ -363,7 +363,7 @@ func TestContainerInspectHostConfigPID(t *testing.T) {
 	// Run the first container
 	base.Cmd("run", "-d", "--name", testContainer1, testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
-	container1_ID := strings.TrimSpace(base.Cmd("inspect", "-f", "{{.Id}}", testContainer1).Out())
+	containerId1 := strings.TrimSpace(base.Cmd("inspect", "-f", "{{.Id}}", testContainer1).Out())
 
 	base.Cmd("run", "-d", "--name", testContainer2,
 		"--pid", fmt.Sprintf("container:%s", testContainer1),
@@ -371,7 +371,7 @@ func TestContainerInspectHostConfigPID(t *testing.T) {
 
 	inspect := base.InspectContainer(testContainer2)
 
-	assert.Equal(t, fmt.Sprintf("container:%s", container1_ID), inspect.HostConfig.PidMode)
+	assert.Equal(t, fmt.Sprintf("container:%s", containerId1), inspect.HostConfig.PidMode)
 
 }
 
