@@ -18,6 +18,7 @@ package container
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -300,7 +301,7 @@ func TestContainerInspectHostConfigDefaults(t *testing.T) {
 	assert.Equal(t, bool(false), inspect.HostConfig.OomKillDisable)
 	assert.Equal(t, bool(false), inspect.HostConfig.ReadonlyRootfs)
 	assert.Equal(t, "", inspect.HostConfig.UTSMode)
-	assert.Equal(t, 0, inspect.HostConfig.ShmSize)
+	assert.Equal(t, int64(0), inspect.HostConfig.ShmSize)
 	assert.Equal(t, "io.containerd.runc.v2", inspect.HostConfig.Runtime)
 	assert.Equal(t, 0, len(inspect.HostConfig.Sysctls))
 	assert.Equal(t, 0, len(inspect.HostConfig.Devices))
@@ -395,15 +396,20 @@ func TestContainerInspectDevices(t *testing.T) {
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer).Run()
 
+	dir, err := os.MkdirTemp(t.TempDir(), "rw")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	base.Cmd("run", "-d", "--name", testContainer,
-		"--device", "/dev/zero:/dev/xvda",
+		"--device", dir+":/dev/xvda",
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
 
 	expectedDevices := []dockercompat.DeviceMapping{
 		{
-			PathOnHost:        "/dev/zero",
+			PathOnHost:        dir,
 			PathInContainer:   "/dev/xvda",
 			CgroupPermissions: "rwm",
 		},
