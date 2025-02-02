@@ -201,6 +201,7 @@ func generateCgroupOpts(id string, options types.ContainerCreateOptions, interna
 		return nil, fmt.Errorf("unknown cgroupns mode %q", options.Cgroupns)
 	}
 
+	log.L.Info("(TestContainerInspectDevices INFO) before for loop")
 	for _, f := range options.Device {
 		devPath, conPath, mode, err := ParseDevice(f)
 		if err != nil {
@@ -212,6 +213,7 @@ func generateCgroupOpts(id string, options types.ContainerCreateOptions, interna
 		deviceMap.PathInContainer = conPath
 		deviceMap.CgroupPermissions = mode
 		internalLabels.deviceMapping = append(internalLabels.deviceMapping, deviceMap)
+		log.L.Warnf("(TestContainerInspectDevices INFO) setting the device mapping info %v", deviceMap)
 	}
 
 	return opts, nil

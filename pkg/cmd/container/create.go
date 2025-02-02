@@ -118,6 +118,8 @@ func Create(ctx context.Context, client *containerd.Client, args []string, netMa
 		oci.WithDefaultSpec(),
 	)
 
+	log.L.Infof("(TestContainerInspectDevices INFO) Calling setPlatformOptions with options.device = %v", options.Device)
+
 	platformOpts, err := setPlatformOptions(ctx, client, id, netManager.NetworkOptions().UTSNamespace, &internalLabels, options)
 	if err != nil {
 		return nil, generateRemoveStateDirFunc(ctx, id, internalLabels), err
@@ -772,7 +774,9 @@ func withInternalLabels(internalLabels internalLabels) (containerd.NewContainerO
 		dnsSettings.DNSResolvConfOptions = internalLabels.dnsResolvConfOptions
 	}
 
+	log.L.Infof("(TestContainerInspectDevices INFO) before len(internalLabels.deviceMapping) = %v", len(internalLabels.deviceMapping))
 	if len(internalLabels.deviceMapping) > 0 {
+		log.L.Warn("(TestContainerInspectDevices INFO) pulling deviceMapping from internal labels ")
 		hostConfigLabel.Devices = append(hostConfigLabel.Devices, internalLabels.deviceMapping...)
 	}
 
