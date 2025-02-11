@@ -56,7 +56,8 @@ func setPlatformOptions(ctx context.Context, client *containerd.Client, id, uts 
 			{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
 		}))
 
-	cgOpts, err := generateCgroupOpts(id, options)
+	log.L.Infof("(TestContainerInspectDevices INFO) Calling generateCgroupOpts with options.device = %v", options.Device)
+	cgOpts, err := generateCgroupOpts(id, options, internalLabels)
 	if err != nil {
 		return nil, err
 	}

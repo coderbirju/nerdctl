@@ -32,6 +32,7 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
 	"github.com/containerd/nerdctl/v2/pkg/infoutil"
+	"github.com/containerd/nerdctl/v2/pkg/inspecttypes/dockercompat"
 	"github.com/containerd/nerdctl/v2/pkg/rootlessutil"
 )
 
@@ -41,7 +42,7 @@ type customMemoryOptions struct {
 	disableOOMKiller  *bool
 }
 
-func generateCgroupOpts(id string, options types.ContainerCreateOptions) ([]oci.SpecOpts, error) {
+func generateCgroupOpts(id string, options types.ContainerCreateOptions, internalLabels *internalLabels) ([]oci.SpecOpts, error) {
 	if options.KernelMemory != "" {
 		log.L.Warnf("The --kernel-memory flag is no longer supported. This flag is a noop.")
 	}
@@ -200,12 +201,19 @@ func generateCgroupOpts(id string, options types.ContainerCreateOptions) ([]oci.
 		return nil, fmt.Errorf("unknown cgroupns mode %q", options.Cgroupns)
 	}
 
+	log.L.Info("(TestContainerInspectDevices INFO) before for loop")
 	for _, f := range options.Device {
 		devPath, conPath, mode, err := ParseDevice(f)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse device %q: %w", f, err)
 		}
 		opts = append(opts, oci.WithDevices(devPath, conPath, mode))
+		var deviceMap dockercompat.DeviceMapping
+		deviceMap.PathOnHost = devPath
+		deviceMap.PathInContainer = conPath
+		deviceMap.CgroupPermissions = mode
+		internalLabels.deviceMapping = append(internalLabels.deviceMapping, deviceMap)
+		log.L.Warnf("(TestContainerInspectDevices INFO) setting the device mapping info %v", deviceMap)
 	}
 
 	return opts, nil
