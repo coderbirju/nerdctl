@@ -422,6 +422,10 @@ func TestContainerInspectDevices(t *testing.T) {
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer).Run()
 
+	if rootlessutil.IsRootless() && infoutil.CgroupsVersion() == "1" {
+		t.Skip("test skipped for rootless containers on cgroup v1")
+	}
+
 	// Create a temporary directory
 	dir, err := os.MkdirTemp(t.TempDir(), "device-dir")
 	if err != nil {
