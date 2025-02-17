@@ -21,6 +21,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/coreos/go-iptables/iptables"
 	"gotest.tools/v3/assert"
@@ -158,4 +159,40 @@ func TestStopCreated(t *testing.T) {
 	setup()
 
 	base.Cmd("stop", tID).AssertOK()
+}
+
+func TestStopWithLongTimeoutAndSIGKILL(t *testing.T) {
+	t.Parallel()
+	base := testutil.NewBase(t)
+	testContainerName := testutil.Identifier(t)
+	defer base.Cmd("rm", "-f", testContainerName).Run()
+
+	// Start a container that sleeps forever
+	base.Cmd("run", "-d", "--name", testContainerName, testutil.CommonImage, "sleep", "Inf").AssertOK()
+
+	// Stop the container with a 5-second timeout and SIGKILL
+	start := time.Now()
+	base.Cmd("stop", "--time=5", "--signal", "SIGKILL", testContainerName).AssertOK()
+	elapsed := time.Since(start)
+
+	// The container should be stopped almost immediately, well before the 5-second timeout
+	assert.Assert(t, elapsed < 5*time.Second, "Container wasn't stopped immediately with SIGKILL")
+}
+
+func TestStopWithTimeout(t *testing.T) {
+	t.Parallel()
+	base := testutil.NewBase(t)
+	testContainerName := testutil.Identifier(t)
+	defer base.Cmd("rm", "-f", testContainerName).Run()
+
+	// Start a container that sleeps forever
+	base.Cmd("run", "-d", "--name", testContainerName, testutil.CommonImage, "sleep", "Inf").AssertOK()
+
+	// Stop the container with a 3-second timeout
+	start := time.Now()
+	base.Cmd("stop", "--time=3", testContainerName).AssertOK()
+	elapsed := time.Since(start)
+
+	// The container should get the SIGKILL before the 10s default timeout
+	assert.Assert(t, elapsed < 10*time.Second, "Container did not respect --timeout flag")
 }
