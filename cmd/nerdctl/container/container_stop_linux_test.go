@@ -82,13 +82,20 @@ func TestStopWithStopSignal(t *testing.T) {
 
 	base.Cmd("run", "-d", "--stop-signal", "SIGQUIT", "--name", testContainerName, testutil.CommonImage, "sh", "-euxc", `#!/bin/sh
 set -eu
-trap 'quit=1' QUIT
+echo "Script started"
 quit=0
-while [ $quit -ne 1 ]; do
-    printf 'wait quit'
+trap 'echo "SIGQUIT received"; quit=1' QUIT
+echo "Trap set"
+while true; do
+    if [ $quit -eq 1 ]; then
+        echo "Quitting loop"
+        break
+    fi
+    echo "In loop"
     sleep 1
 done
-echo "signal quit"`).AssertOK()
+echo "signal quit"
+sync`).AssertOK()
 	base.Cmd("stop", testContainerName).AssertOK()
 	base.Cmd("logs", "-f", testContainerName).AssertOutContains("signal quit")
 }
