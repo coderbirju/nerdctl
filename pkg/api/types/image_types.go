@@ -19,7 +19,7 @@ package types
 import (
 	"io"
 
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // ImageListOptions specifies options for `nerdctl image list`.
@@ -124,6 +124,12 @@ type ImageConvertOptions struct {
 	OverlaydbDBStr string
 	// #endregion
 
+	// #region soci flags
+	// Soci convert image to SOCI format. Should be used in conjunction with '--oci'
+	Soci bool
+	// SociOptions contains SOCI-specific options
+	SociOptions SociOptions
+	// #endregion
 }
 
 // ImageCryptOptions specifies options for `nerdctl image encrypt` and `nerdctl image decrypt`.
