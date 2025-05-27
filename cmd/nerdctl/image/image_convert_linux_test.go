@@ -93,6 +93,7 @@ func TestImageConvert(t *testing.T) {
 				Require: require.All(
 					require.Not(nerdtest.Docker),
 					nerdtest.Soci,
+					nerdtest.SociVersion("0.10.0"),
 				),
 				Cleanup: func(data test.Data, helpers test.Helpers) {
 					helpers.Anyhow("rmi", "-f", data.Identifier("converted-image"))
