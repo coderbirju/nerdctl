@@ -19,6 +19,7 @@ package container
 import (
 	"errors"
 	"fmt"
+	"github.com/containerd/nerdctl/v2/pkg/healthcheck"
 	"runtime"
 	"strings"
 
@@ -437,6 +438,14 @@ func runAction(cmd *cobra.Command, args []string) error {
 	}
 	if err := task.Start(ctx); err != nil {
 		return err
+	}
+
+	// Setup container healthchecks.
+	if err := healthcheck.CreateTimer(ctx, c); err != nil {
+		return fmt.Errorf("failed to create healthcheck timer: %w", err)
+	}
+	if err := healthcheck.StartTimer(ctx, c); err != nil {
+		return fmt.Errorf("failed to start healthcheck timer: %w", err)
 	}
 
 	if createOpt.Detach {
