@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/containerd/nerdctl/v2/pkg/healthcheck"
 	"os"
 	"syscall"
 
@@ -178,6 +179,11 @@ func RemoveContainer(ctx context.Context, c containerd.Container, globalOptions 
 
 		// Otherwise, nil the error so that we do not write the error label on the container
 		retErr = nil
+
+		// Clean up healthcheck systemd units
+		if err := healthcheck.RemoveTransientHealthCheckFiles(ctx, c); err != nil {
+			log.G(ctx).WithError(err).Warnf("failed to clean up healthcheck units for container %q", id)
+		}
 
 		// Now, delete the actual container
 		var delOpts []containerd.DeleteOpts
