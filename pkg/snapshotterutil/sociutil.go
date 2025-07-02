@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/mod/semver"
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/containerd/containerd/v2/client"
 	"github.com/containerd/log"
@@ -81,14 +81,23 @@ func CheckSociVersion(requiredVersion string) error {
 		return fmt.Errorf("failed to parse SOCI version from output: %s", versionStr)
 	}
 
-	// Extract version number and add 'v' prefix required by semver package
-	// The regex captures only the numeric part, so we always need to add the 'v'
-	installedVersion := "v" + matches[1]
-	requiredSemver := "v" + requiredVersion
+	// Extract version number (without 'v' prefix)
+	installedVersionStr := matches[1]
 
-	// Use semver package to compare versions
-	if semver.Compare(installedVersion, requiredSemver) < 0 {
-		return fmt.Errorf("SOCI version %s is lower than the required version %s for the convert operation", strings.TrimPrefix(installedVersion, "v"), requiredVersion)
+	// Parse versions using Masterminds/semver
+	installedVersion, err := semver.NewVersion(installedVersionStr)
+	if err != nil {
+		return fmt.Errorf("failed to parse installed SOCI version: %w", err)
+	}
+
+	requiredVersion, err := semver.NewVersion(requiredVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse required SOCI version: %w", err)
+	}
+
+	// Compare versions
+	if installedVersion.LessThan(requiredVersion) {
+		return fmt.Errorf("SOCI version %s is lower than the required version %s for the convert operation", installedVersion.String(), requiredVersion.String())
 	}
 
 	return nil
