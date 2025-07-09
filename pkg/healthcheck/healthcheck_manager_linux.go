@@ -49,7 +49,7 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 	containerID := container.ID()
 	hcName := hcUnitName(containerID, true)                         // TODO add random suffix each time timer file is created for a container
 	fmt.Printf("⏱️  Creating healthcheck timer unit: %s\n", hcName) // TODO remove this later
-	cmd := []string{"--property", "LogLevelMax=notice"}
+	cmd := []string{}
 	if rootlessutil.IsRootless() {
 		cmd = append(cmd, "--user")
 	}
@@ -57,10 +57,11 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 		cmd = append(cmd, "--setenv=PATH="+path)
 	}
 
-	cmd = append(cmd, "--unit", hcName, "--on-unit-inactive="+hc.Interval.String(), "--timer-property=AccuracySec=1s", "nerdctl", "container", "healthcheck", containerID)
+	cmd = append(cmd, "--unit", hcName, "--on-unit-inactive="+hc.Interval.String(), "--timer-property=AccuracySec=1s")
 
+	cmd = append(cmd, "nerdctl", "container", "healthcheck", containerID)
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		cmd = append(cmd, "--log-level=debug", "--syslog")
+		cmd = append(cmd, "--debug")
 	}
 
 	conn, err := dbus.NewSystemConnectionContext(context.Background())
