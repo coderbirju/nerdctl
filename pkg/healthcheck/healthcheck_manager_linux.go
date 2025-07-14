@@ -118,7 +118,17 @@ func RemoveTransientHealthCheckFiles(ctx context.Context, container containerd.C
 		return nil
 	}
 
-	fmt.Printf("⏱️  Removing healthcheck timer unit: %s\n", container.ID()) // TODO remove this later
+	return RemoveTransientHealthCheckFilesByID(ctx, container.ID())
+}
+
+// RemoveTransientHealthCheckFilesByID stops and cleans up the transient timer and service using just the container ID.
+func RemoveTransientHealthCheckFilesByID(ctx context.Context, containerID string) error {
+	// Don't proceed if systemd is unavailable or disabled
+	if !defaults.IsSystemdAvailable() || os.Getenv("DISABLE_HC_SYSTEMD") == "true" {
+		return nil
+	}
+
+	fmt.Printf("⏱️  Removing healthcheck timer unit: %s\n", containerID) // TODO remove this later
 
 	conn, err := dbus.NewSystemConnectionContext(context.Background())
 	if err != nil {
@@ -126,7 +136,7 @@ func RemoveTransientHealthCheckFiles(ctx context.Context, container containerd.C
 	}
 	defer conn.Close()
 
-	unitName := hcUnitName(container.ID(), true)
+	unitName := hcUnitName(containerID, true)
 	timer := unitName + ".timer"
 	service := unitName + ".service"
 
