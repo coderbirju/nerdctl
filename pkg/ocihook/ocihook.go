@@ -39,6 +39,7 @@ import (
 
 	"github.com/containerd/nerdctl/v2/pkg/bypass4netnsutil"
 	"github.com/containerd/nerdctl/v2/pkg/dnsutil/hostsstore"
+	"github.com/containerd/nerdctl/v2/pkg/healthcheck"
 	"github.com/containerd/nerdctl/v2/pkg/internal/filesystem"
 	"github.com/containerd/nerdctl/v2/pkg/labels"
 	"github.com/containerd/nerdctl/v2/pkg/namestore"
@@ -560,8 +561,11 @@ func onCreateRuntime(opts *handlerOpts) error {
 }
 
 func onPostStop(opts *handlerOpts) error {
+	log.L.Debugf("onPostStop hook triggered for container %s (namespace: %s)", opts.state.ID, opts.state.Annotations[labels.Namespace])
+
 	lf, err := state.New(opts.state.Annotations[labels.StateDir])
 	if err != nil {
+		log.L.WithError(err).Errorf("failed to create state store for container %s", opts.state.ID)
 		return err
 	}
 
@@ -585,6 +589,13 @@ func onPostStop(opts *handlerOpts) error {
 
 	ctx := context.Background()
 	ns := opts.state.Annotations[labels.Namespace]
+
+	if err := healthcheck.RemoveTransientHealthCheckFilesByID(ctx, opts.state.ID); err != nil {
+		log.L.WithError(err).Warnf("failed to clean up healthcheck units for container %s", opts.state.ID)
+	} else {
+		log.L.Infof("successfully cleaned up healthcheck files for container %s", opts.state.ID)
+	}
+
 	if opts.cni != nil {
 		var err error
 		b4nnEnabled, b4nnBindEnabled, err := bypass4netnsutil.IsBypass4netnsEnabled(opts.state.Annotations)
