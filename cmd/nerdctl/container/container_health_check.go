@@ -43,6 +43,14 @@ func HealthCheckCommand() *cobra.Command {
 		SilenceErrors:     true,
 	}
 
+	// Internal flags for workflow differentiation
+	healthCheckCommand.Flags().Bool("health", false, "Execute health interval workflow (internal use)")
+	healthCheckCommand.Flags().Bool("start-period", false, "Execute start period workflow (internal use)")
+
+	// Mark these flags as hidden since they're for internal use
+	healthCheckCommand.Flags().MarkHidden("health")
+	healthCheckCommand.Flags().MarkHidden("start-period")
+
 	return healthCheckCommand
 }
 
@@ -58,6 +66,21 @@ func healthCheckAction(cmd *cobra.Command, args []string) error {
 	}
 	defer cancel()
 
+	// Parse workflow flags
+	healthFlag, err := cmd.Flags().GetBool("health")
+	if err != nil {
+		return err
+	}
+	startPeriodFlag, err := cmd.Flags().GetBool("start-period")
+	if err != nil {
+		return err
+	}
+
+	// Ensure flags are mutually exclusive
+	if healthFlag && startPeriodFlag {
+		return fmt.Errorf("--health and --start-period flags are mutually exclusive")
+	}
+
 	containerID := args[0]
 	walker := &containerwalker.ContainerWalker{
 		Client: client,
@@ -65,7 +88,16 @@ func healthCheckAction(cmd *cobra.Command, args []string) error {
 			if found.MatchCount > 1 {
 				return fmt.Errorf("multiple IDs found with provided prefix: %s", found.Req)
 			}
-			return container.HealthCheck(ctx, client, found.Container)
+
+			// Route to appropriate workflow based on flags
+			if healthFlag {
+				return container.HealthCheck(ctx, client, found.Container, container.WorkflowHealthInterval)
+			} else if startPeriodFlag {
+				return container.HealthCheck(ctx, client, found.Container, container.WorkflowStartPeriod)
+			} else {
+				// No workflow specified - this should not happen in normal operation
+				return fmt.Errorf("workflow type must be specified (--health or --start-period)")
+			}
 		},
 	}
 

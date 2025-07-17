@@ -33,7 +33,7 @@ import (
 )
 
 // ExecuteHealthCheck executes the health check command for a container
-func ExecuteHealthCheck(ctx context.Context, task containerd.Task, container containerd.Container, hc *Healthcheck) error {
+func ExecuteHealthCheck(ctx context.Context, task containerd.Task, container containerd.Container, hc *Healthcheck, workflowType string) error {
 	// Prepare process spec for health check command
 	processSpec, err := prepareProcessSpec(ctx, container, hc)
 	if err != nil {
@@ -51,13 +51,13 @@ func ExecuteHealthCheck(ctx context.Context, task containerd.Task, container con
 			End:      time.Now(),
 			ExitCode: -1,
 			Output:   err.Error(),
-		})
+		}, workflowType)
 		return fmt.Errorf("health check probe failed: %w", err)
 	}
 
 	// Success case, update health status
 	result.Start = startTime
-	if err := updateHealthStatus(ctx, container, hc, result); err != nil {
+	if err := updateHealthStatus(ctx, container, hc, result, workflowType); err != nil {
 		return fmt.Errorf("failed to update health status: %w", err)
 	}
 	return nil
@@ -118,7 +118,7 @@ func probeHealthCheck(ctx context.Context, task containerd.Task, hc *Healthcheck
 }
 
 // updateHealthStatus updates the health status based on the health check result
-func updateHealthStatus(ctx context.Context, container containerd.Container, hcConfig *Healthcheck, hcResult *HealthcheckResult) error {
+func updateHealthStatus(ctx context.Context, container containerd.Container, hcConfig *Healthcheck, hcResult *HealthcheckResult, workflowType string) error {
 	// Get current health state from labels
 	currentHealth, err := readHealthStateFromLabels(ctx, container)
 	if err != nil {
@@ -131,24 +131,59 @@ func updateHealthStatus(ctx context.Context, container containerd.Container, hcC
 		}
 	}
 
-	// Check if still within start period
-	startPeriod := hcConfig.StartPeriod
+	// Get container info for timing calculations
 	info, err := container.Info(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get container info: %w", err)
 	}
 	containerCreated := info.CreatedAt
+	startPeriod := hcConfig.StartPeriod
 	stillInStartPeriod := hcResult.Start.Sub(containerCreated) < startPeriod
 
-	// Update health status based on exit code
-	if hcResult.ExitCode == 0 {
-		currentHealth.Status = Healthy
-		currentHealth.FailingStreak = 0
-	} else if !stillInStartPeriod {
-		currentHealth.FailingStreak++
-		if currentHealth.FailingStreak >= hcConfig.Retries {
-			currentHealth.Status = Unhealthy
+	// Apply workflow-specific logic
+	switch workflowType {
+	case "start-period":
+		// Start-period workflow logic
+		if currentHealth.Status == Healthy || !stillInStartPeriod {
+			// Container is already healthy or start period has expired - exit early
+			// TODO call fucntions that remove the start-period timer files here
+			log.G(ctx).Debug("Start period workflow: container is healthy or start period expired, exiting")
+			return nil
 		}
+
+		// Update health status based on exit code during start period
+		if hcResult.ExitCode == 0 {
+			// Successful health check - mark as healthy (terminal state for start-period)
+			currentHealth.Status = Healthy
+			currentHealth.FailingStreak = 0
+
+			// TODO call fucntions that remove the start-period timer files here set startPeriod to be zero?
+		} else {
+			// Failed health check during start period - don't update failing streak or status
+			// Just continue in Starting state
+			log.G(ctx).Debug("Start period workflow: health check failed but still in start period, maintaining Starting status")
+		}
+
+	case "health-interval":
+		// Health-interval workflow logic (continuous monitoring)
+		if hcResult.ExitCode == 0 {
+			// Successful health check
+			currentHealth.Status = Healthy
+			currentHealth.FailingStreak = 0
+		} else {
+			// Failed health check
+			if !stillInStartPeriod {
+				// Only count failures after start period
+				currentHealth.FailingStreak++
+				if currentHealth.FailingStreak >= hcConfig.Retries {
+					currentHealth.Status = Unhealthy
+				}
+			}
+			// During start period, failures don't affect the status
+		}
+
+	default:
+		return fmt.Errorf("unknown workflow type: %s", workflowType)
 	}
 
 	// Write updated health state back to labels

@@ -27,8 +27,19 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/labels"
 )
 
+// Workflow types for healthcheck execution
+const (
+	WorkflowHealthInterval = "health-interval"
+	WorkflowStartPeriod    = "start-period"
+)
+
 // HealthCheck executes the health check command for a container
-func HealthCheck(ctx context.Context, client *containerd.Client, container containerd.Container) error {
+func HealthCheck(ctx context.Context, client *containerd.Client, container containerd.Container, workflowType string) error {
+	// Validate workflow type
+	if workflowType != WorkflowHealthInterval && workflowType != WorkflowStartPeriod {
+		return fmt.Errorf("invalid workflow type: %s", workflowType)
+	}
+
 	// verify container status and get task
 	task, err := isContainerRunning(ctx, container)
 	if err != nil {
@@ -65,7 +76,7 @@ func HealthCheck(ctx context.Context, client *containerd.Client, container conta
 	}
 
 	// Execute the health check
-	return healthcheck.ExecuteHealthCheck(ctx, task, container, hcConfig)
+	return healthcheck.ExecuteHealthCheck(ctx, task, container, hcConfig, workflowType)
 }
 
 func isContainerRunning(ctx context.Context, container containerd.Container) (containerd.Task, error) {
