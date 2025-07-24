@@ -44,12 +44,8 @@ func HealthCheckCommand() *cobra.Command {
 	}
 
 	// Internal flags for workflow differentiation
-	healthCheckCommand.Flags().Bool("health", false, "Execute health interval workflow (internal use)")
-	healthCheckCommand.Flags().Bool("start-period", false, "Execute start period workflow (internal use)")
-
-	// Mark these flags as hidden since they're for internal use
-	healthCheckCommand.Flags().MarkHidden("health")
-	healthCheckCommand.Flags().MarkHidden("start-period")
+	healthCheckCommand.Flags().Bool("health", false, "Execute health interval workflow (used by systemd timers)")
+	healthCheckCommand.Flags().Bool("start-period", false, "Execute start period workflow (used by systemd timers)")
 
 	return healthCheckCommand
 }

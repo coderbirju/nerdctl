@@ -19,9 +19,10 @@ package container
 import (
 	"errors"
 	"fmt"
-	"github.com/containerd/nerdctl/v2/pkg/healthcheck"
 	"runtime"
 	"strings"
+
+	"github.com/containerd/nerdctl/v2/pkg/healthcheck"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -441,10 +442,10 @@ func runAction(cmd *cobra.Command, args []string) error {
 	}
 
 	// Setup container healthchecks.
-	if err := healthcheck.CreateTimer(ctx, c); err != nil {
+	if err := healthcheck.CreateHealthCheckTimers(ctx, c); err != nil {
 		return fmt.Errorf("failed to create healthcheck timer: %w", err)
 	}
-	if err := healthcheck.StartTimer(ctx, c); err != nil {
+	if err := healthcheck.StartHealthCheckTimers(ctx, c); err != nil {
 		return fmt.Errorf("failed to start healthcheck timer: %w", err)
 	}
 

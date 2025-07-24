@@ -286,10 +286,10 @@ func Start(ctx context.Context, container containerd.Container, isAttach bool, i
 	}
 
 	// If container has health checks configured, create and start systemd timer/service files.
-	if err := healthcheck.CreateTimer(ctx, container); err != nil {
+	if err := healthcheck.CreateHealthCheckTimers(ctx, container); err != nil {
 		return fmt.Errorf("failed to create healthcheck timer: %w", err)
 	}
-	if err := healthcheck.StartTimer(ctx, container); err != nil {
+	if err := healthcheck.StartHealthCheckTimers(ctx, container); err != nil {
 		return fmt.Errorf("failed to start healthcheck timer: %w", err)
 	}
 
@@ -362,9 +362,9 @@ func Stop(ctx context.Context, container containerd.Container, timeout *time.Dur
 	}()
 
 	// Clean up healthcheck units if configured.
-	// if err := healthcheck.RemoveTransientHealthCheckFiles(ctx, container); err != nil {
-	// 	return fmt.Errorf("failed to clean up healthcheck units for container %s", container.ID())
-	// }
+	if err := healthcheck.RemoveTransientHealthCheckFiles(ctx, container); err != nil {
+		return fmt.Errorf("failed to clean up healthcheck units for container %s", container.ID())
+	}
 
 	if timeout == nil {
 		t, ok := l[labels.StopTimeout]
@@ -505,9 +505,9 @@ func Pause(ctx context.Context, client *containerd.Client, id string) error {
 	}
 
 	// Clean up healthcheck units if configured.
-	// if err := healthcheck.RemoveTransientHealthCheckFiles(ctx, container); err != nil {
-	// 	return fmt.Errorf("failed to clean up healthcheck units for container %s", container.ID())
-	// }
+	if err := healthcheck.RemoveTransientHealthCheckFiles(ctx, container); err != nil {
+		return fmt.Errorf("failed to clean up healthcheck units for container %s", container.ID())
+	}
 
 	switch status.Status {
 	case containerd.Paused:
@@ -537,10 +537,10 @@ func Unpause(ctx context.Context, client *containerd.Client, id string) error {
 	}
 
 	// Recreate healthcheck related systemd timer/service files.
-	if err := healthcheck.CreateTimer(ctx, container); err != nil {
+	if err := healthcheck.CreateHealthCheckTimers(ctx, container); err != nil {
 		return fmt.Errorf("failed to create healthcheck timer: %w", err)
 	}
-	if err := healthcheck.StartTimer(ctx, container); err != nil {
+	if err := healthcheck.StartHealthCheckTimers(ctx, container); err != nil {
 		return fmt.Errorf("failed to start healthcheck timer: %w", err)
 	}
 

@@ -146,8 +146,10 @@ func updateHealthStatus(ctx context.Context, container containerd.Container, hcC
 		// Start-period workflow logic
 		if currentHealth.Status == Healthy || !stillInStartPeriod {
 			// Container is already healthy or start period has expired - exit early
-			// TODO call fucntions that remove the start-period timer files here
-			log.G(ctx).Debug("Start period workflow: container is healthy or start period expired, exiting")
+			log.G(ctx).Debug("Start period workflow: container is healthy or start period expired, cleaning up timer")
+			if err := RemoveStartPeriodTimer(ctx, container.ID()); err != nil {
+				log.G(ctx).WithError(err).Warn("Failed to cleanup start-period timer")
+			}
 			return nil
 		}
 
@@ -157,7 +159,11 @@ func updateHealthStatus(ctx context.Context, container containerd.Container, hcC
 			currentHealth.Status = Healthy
 			currentHealth.FailingStreak = 0
 
-			// TODO call fucntions that remove the start-period timer files here set startPeriod to be zero?
+			// Clean up start-period timer since container is now healthy
+			log.G(ctx).Debug("Start period workflow: container became healthy, cleaning up timer")
+			if err := RemoveStartPeriodTimer(ctx, container.ID()); err != nil {
+				log.G(ctx).WithError(err).Warn("Failed to cleanup start-period timer after becoming healthy")
+			}
 		} else {
 			// Failed health check during start period - don't update failing streak or status
 			// Just continue in Starting state
@@ -165,22 +171,36 @@ func updateHealthStatus(ctx context.Context, container containerd.Container, hcC
 		}
 
 	case "health-interval":
+		log.G(ctx).Debugf("Health-interval workflow: starting execution for container %s", container.ID())
+		log.G(ctx).Debugf("Health-interval workflow: current status=%s, failing_streak=%d", currentHealth.Status, currentHealth.FailingStreak)
+		log.G(ctx).Debugf("Health-interval workflow: still_in_start_period=%t, start_period=%v", stillInStartPeriod, startPeriod)
+
 		// Health-interval workflow logic (continuous monitoring)
 		if hcResult.ExitCode == 0 {
+			log.G(ctx).Debugf("Health-interval workflow: health check succeeded (exit_code=0)")
+			if currentHealth.Status != Healthy {
+				log.G(ctx).Infof("Health-interval workflow: transitioning from %s to Healthy", currentHealth.Status)
+			}
 			// Successful health check
 			currentHealth.Status = Healthy
 			currentHealth.FailingStreak = 0
+			log.G(ctx).Debugf("Health-interval workflow: updated status=Healthy, failing_streak=0")
 		} else {
+			log.G(ctx).Debugf("Health-interval workflow: health check failed (exit_code=%d)", hcResult.ExitCode)
 			// Failed health check
 			if !stillInStartPeriod {
-				// Only count failures after start period
+				log.G(ctx).Debugf("Health-interval workflow: not in start period, counting failure")
 				currentHealth.FailingStreak++
+				log.G(ctx).Debugf("Health-interval workflow: failing_streak increased to %d (retries=%d)", currentHealth.FailingStreak, hcConfig.Retries)
 				if currentHealth.FailingStreak >= hcConfig.Retries {
+					log.G(ctx).Infof("Health-interval workflow: transitioning from %s to Unhealthy (failing_streak=%d >= retries=%d)", currentHealth.Status, currentHealth.FailingStreak, hcConfig.Retries)
 					currentHealth.Status = Unhealthy
 				}
+			} else {
+				log.G(ctx).Debugf("Health-interval workflow: still in start period, ignoring failure")
 			}
-			// During start period, failures don't affect the status
 		}
+		log.G(ctx).Debugf("Health-interval workflow: final status=%s, failing_streak=%d", currentHealth.Status, currentHealth.FailingStreak)
 
 	default:
 		return fmt.Errorf("unknown workflow type: %s", workflowType)

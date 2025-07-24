@@ -18,20 +18,41 @@ package healthcheck
 
 import (
 	"context"
+
 	containerd "github.com/containerd/containerd/v2/client"
 )
 
-// CreateTimer sets up the transient systemd timer and service for healthchecks.
-func CreateTimer(ctx context.Context, container containerd.Container) error {
+// CreateHealthCheckTimers sets up the transient systemd timer and service for healthchecks.
+func CreateHealthCheckTimers(ctx context.Context, container containerd.Container) error {
 	return nil
 }
 
-// StartTimer starts the healthcheck timer unit.
-func StartTimer(ctx context.Context, container containerd.Container) error {
+// StartHealthCheckTimers starts the healthcheck timer unit.
+func StartHealthCheckTimers(ctx context.Context, container containerd.Container) error {
 	return nil
 }
 
 // RemoveTransientHealthCheckFiles stops and cleans up the transient timer and service.
 func RemoveTransientHealthCheckFiles(ctx context.Context, container containerd.Container) error {
+	return nil
+}
+
+// RemoveTransientHealthCheckFilesByID stops and cleans up the transient timer and service using just the container ID.
+func RemoveTransientHealthCheckFilesByID(ctx context.Context, containerID string) error {
+	return nil
+}
+
+// RemoveAllHealthCheckTimers removes both health-interval and start-period timers for a container.
+func RemoveAllHealthCheckTimers(ctx context.Context, containerID string) error {
+	return nil
+}
+
+// RemoveHealthIntervalTimer removes the health-interval timer for a container.
+func RemoveHealthIntervalTimer(ctx context.Context, containerID string) error {
+	return nil
+}
+
+// RemoveStartPeriodTimer removes the start-period timer for a container.
+func RemoveStartPeriodTimer(ctx context.Context, containerID string) error {
 	return nil
 }
