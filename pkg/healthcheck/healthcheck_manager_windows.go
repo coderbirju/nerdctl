@@ -18,6 +18,7 @@ package healthcheck
 
 import (
 	"context"
+
 	containerd "github.com/containerd/containerd/v2/client"
 )
 
@@ -33,5 +34,10 @@ func StartTimer(ctx context.Context, container containerd.Container) error {
 
 // RemoveTransientHealthCheckFiles stops and cleans up the transient timer and service.
 func RemoveTransientHealthCheckFiles(ctx context.Context, container containerd.Container) error {
+	return nil
+}
+
+// RemoveTransientHealthCheckFilesByID stops and cleans up the transient timer and service using just the container ID.
+func RemoveTransientHealthCheckFilesByID(ctx context.Context, containerID string) error {
 	return nil
 }

@@ -36,7 +36,6 @@ import (
 )
 
 // CreateTimer sets up the transient systemd timer and service for healthchecks.
-// TODO handle startup interval
 func CreateTimer(ctx context.Context, container containerd.Container) error {
 	hc := extractHealthcheck(ctx, container)
 	if hc == nil {
@@ -47,8 +46,9 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 	}
 
 	containerID := container.ID()
-	hcName := hcUnitName(containerID, true)                         // TODO add random suffix each time timer file is created for a container
-	fmt.Printf("⏱️  Creating healthcheck timer unit: %s\n", hcName) // TODO remove this later
+	hcName := hcUnitName(containerID, true)
+	logrus.Debugf("Creating healthcheck timer unit: %s", hcName)
+
 	cmd := []string{}
 	if rootlessutil.IsRootless() {
 		cmd = append(cmd, "--user")
@@ -57,6 +57,7 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 		cmd = append(cmd, "--setenv=PATH="+path)
 	}
 
+	// Always use health-interval for timer frequency
 	cmd = append(cmd, "--unit", hcName, "--on-unit-inactive="+hc.Interval.String(), "--timer-property=AccuracySec=1s")
 
 	cmd = append(cmd, "nerdctl", "container", "healthcheck", containerID)
@@ -79,7 +80,7 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 	return nil
 }
 
-// startTimer starts the healthcheck timer unit.
+// StartTimer starts the healthcheck timer unit.
 // TODO if we persist hcName to container state, pass that to this function.
 func StartTimer(ctx context.Context, container containerd.Container) error {
 	hc := extractHealthcheck(ctx, container)
@@ -128,7 +129,7 @@ func RemoveTransientHealthCheckFilesByID(ctx context.Context, containerID string
 		return nil
 	}
 
-	fmt.Printf("⏱️  Removing healthcheck timer unit: %s\n", containerID) // TODO remove this later
+	logrus.Debugf("Removing healthcheck timer unit: %s", containerID)
 
 	conn, err := dbus.NewSystemConnectionContext(context.Background())
 	if err != nil {
@@ -164,9 +165,6 @@ func RemoveTransientHealthCheckFilesByID(ctx context.Context, containerID string
 // hcUnitName returns a systemd unit name for a container healthcheck.
 func hcUnitName(containerID string, bare bool) string {
 	unit := containerID
-	//if isStartup {
-	//	unit += "-startup"
-	//}
 	if !bare {
 		unit += fmt.Sprintf("-%x", rand.Int())
 	}
