@@ -7,16 +7,16 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/Microsoft/hcsshim v0.13.0
-	github.com/compose-spec/compose-go/v2 v2.7.1 //gomodjail:unconfined
+	github.com/compose-spec/compose-go/v2 v2.8.1 //gomodjail:unconfined
 	github.com/containerd/accelerated-container-image v1.3.0
 	github.com/containerd/cgroups/v3 v3.0.5 //gomodjail:unconfined
 	github.com/containerd/console v1.0.5 //gomodjail:unconfined
 	github.com/containerd/containerd/api v1.9.0
-	github.com/containerd/containerd/v2 v2.1.3 //gomodjail:unconfined
+	github.com/containerd/containerd/v2 v2.1.4 //gomodjail:unconfined
 	github.com/containerd/continuity v0.4.5 //gomodjail:unconfined
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/fifo v1.1.0 //gomodjail:unconfined
-	github.com/containerd/go-cni v1.1.12 //gomodjail:unconfined
+	github.com/containerd/go-cni v1.1.13 //gomodjail:unconfined
 	github.com/containerd/imgcrypt/v2 v2.0.1 //gomodjail:unconfined
 	github.com/containerd/log v0.1.0
 	github.com/containerd/nerdctl/mod/tigron v0.0.0
@@ -29,12 +29,12 @@ require (
 	github.com/containernetworking/cni v1.3.0 //gomodjail:unconfined
 	github.com/containernetworking/plugins v1.7.1 //gomodjail:unconfined
 	github.com/coreos/go-iptables v0.8.0 //gomodjail:unconfined
-	github.com/coreos/go-systemd/v22 v22.5.0
+	github.com/coreos/go-systemd/v22 v22.6.0
 	github.com/cyphar/filepath-securejoin v0.4.1 //gomodjail:unconfined
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v28.3.2+incompatible //gomodjail:unconfined
-	github.com/docker/docker v28.3.2+incompatible //gomodjail:unconfined
-	github.com/docker/go-connections v0.5.0
+	github.com/docker/cli v28.3.3+incompatible //gomodjail:unconfined
+	github.com/docker/docker v28.3.3+incompatible //gomodjail:unconfined
+	github.com/docker/go-connections v0.6.0
 	github.com/docker/go-units v0.5.0
 	github.com/fahedouch/go-logrotate v0.3.0 //gomodjail:unconfined
 	github.com/fatih/color v1.18.0 //gomodjail:unconfined
@@ -61,14 +61,14 @@ require (
 	github.com/vishvananda/netlink v1.3.1 //gomodjail:unconfined
 	github.com/vishvananda/netns v0.0.5 //gomodjail:unconfined
 	github.com/yuchanns/srslog v1.1.0
-	go.uber.org/mock v0.5.2
+	go.uber.org/mock v0.6.0
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/crypto v0.40.0
-	golang.org/x/net v0.42.0
+	golang.org/x/crypto v0.41.0
+	golang.org/x/net v0.43.0
 	golang.org/x/sync v0.16.0 //gomodjail:unconfined
-	golang.org/x/sys v0.34.0 //gomodjail:unconfined
-	golang.org/x/term v0.33.0 //gomodjail:unconfined
-	golang.org/x/text v0.27.0
+	golang.org/x/sys v0.35.0 //gomodjail:unconfined
+	golang.org/x/term v0.34.0 //gomodjail:unconfined
+	golang.org/x/text v0.28.0
 	gotest.tools/v3 v3.5.2
 	tags.cncf.io/container-device-interface v1.0.1 //gomodjail:unconfined
 )
@@ -120,7 +120,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
 	//gomodjail:unconfined
-	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/sirupsen/logrus v1.9.3
 	github.com/smallstep/pkcs7 v0.1.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
@@ -136,7 +136,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
-	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/mod v0.27.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
 	//gomodjail:unconfined
 	google.golang.org/grpc v1.72.2 // indirect

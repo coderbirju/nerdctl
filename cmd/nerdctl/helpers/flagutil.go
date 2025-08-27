@@ -21,8 +21,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/containerd/nerdctl/v2/pkg"
 	"github.com/containerd/nerdctl/v2/pkg/api/types"
+	"github.com/containerd/nerdctl/v2/pkg/fs"
 )
 
 func VerifyOptions(cmd *cobra.Command) (opt types.ImageVerifyOptions, err error) {
@@ -52,8 +52,7 @@ func ValidateHealthcheckFlags(options types.ContainerCreateOptions) error {
 		options.HealthInterval != 0 ||
 			options.HealthTimeout != 0 ||
 			options.HealthRetries != 0 ||
-			options.HealthStartPeriod != 0 ||
-			options.HealthStartInterval != 0
+			options.HealthStartPeriod != 0
 
 	if options.NoHealthcheck {
 		if options.HealthCmd != "" || healthFlagsSet {
@@ -73,9 +72,6 @@ func ValidateHealthcheckFlags(options types.ContainerCreateOptions) error {
 	}
 	if options.HealthStartPeriod < 0 {
 		return fmt.Errorf("--health-start-period cannot be negative")
-	}
-	if options.HealthStartInterval < 0 {
-		return fmt.Errorf("--health-start-interval cannot be negative")
 	}
 	return nil
 }
@@ -159,7 +155,7 @@ func ProcessRootCmdFlags(cmd *cobra.Command) (types.GlobalCommandOptions, error)
 	}
 
 	// Point to dataRoot for filesystem-helpers implementing rollback / backups.
-	err = pkg.InitFS(dataRoot)
+	err = fs.InitFS(dataRoot)
 	if err != nil {
 		return types.GlobalCommandOptions{}, err
 	}

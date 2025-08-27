@@ -44,6 +44,13 @@ type ContainerKillOptions struct {
 	KillSignal string
 }
 
+// ContainerExportOptions specifies options for `nerdctl (container) export`.
+type ContainerExportOptions struct {
+	Stdout io.Writer
+	// GOptions is the global options
+	GOptions GlobalCommandOptions
+}
+
 // ContainerCreateOptions specifies options for `nerdctl (container) create` and `nerdctl (container) run`.
 type ContainerCreateOptions struct {
 	Stdout io.Writer
@@ -285,13 +292,12 @@ type ContainerCreateOptions struct {
 	ImagePullOpt ImagePullOptions
 
 	// Healthcheck related fields
-	HealthCmd           string
-	HealthInterval      time.Duration
-	HealthTimeout       time.Duration
-	HealthRetries       int
-	HealthStartPeriod   time.Duration
-	HealthStartInterval time.Duration
-	NoHealthcheck       bool
+	HealthCmd         string
+	HealthInterval    time.Duration
+	HealthTimeout     time.Duration
+	HealthRetries     int
+	HealthStartPeriod time.Duration
+	NoHealthcheck     bool
 
 	// UserNS name for user namespace mapping of container
 	UserNS string

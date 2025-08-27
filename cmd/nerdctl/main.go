@@ -40,6 +40,7 @@ import (
 	"github.com/containerd/nerdctl/v2/cmd/nerdctl/internal"
 	"github.com/containerd/nerdctl/v2/cmd/nerdctl/ipfs"
 	"github.com/containerd/nerdctl/v2/cmd/nerdctl/login"
+	"github.com/containerd/nerdctl/v2/cmd/nerdctl/manifest"
 	"github.com/containerd/nerdctl/v2/cmd/nerdctl/namespace"
 	"github.com/containerd/nerdctl/v2/cmd/nerdctl/network"
 	"github.com/containerd/nerdctl/v2/cmd/nerdctl/system"
@@ -287,6 +288,7 @@ Config file ($NERDCTL_TOML): %s
 		container.PauseCommand(),
 		container.UnpauseCommand(),
 		container.CommitCommand(),
+		container.ExportCommand(),
 		container.WaitCommand(),
 		container.RenameCommand(),
 		container.AttachCommand(),
@@ -302,6 +304,7 @@ Config file ($NERDCTL_TOML): %s
 		image.PushCommand(),
 		image.LoadCommand(),
 		image.SaveCommand(),
+		image.ImportCommand(),
 		image.TagCommand(),
 		image.RmiCommand(),
 		image.HistoryCommand(),
@@ -344,6 +347,9 @@ Config file ($NERDCTL_TOML): %s
 
 		// IPFS
 		ipfs.NewIPFSCommand(),
+
+		// Manifest
+		manifest.Command(),
 	)
 	addApparmorCommand(rootCmd)
 	container.AddCpCommand(rootCmd)

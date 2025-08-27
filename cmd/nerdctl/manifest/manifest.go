@@ -14,14 +14,31 @@
    limitations under the License.
 */
 
-package pkg
+package manifest
 
-import "github.com/containerd/nerdctl/v2/pkg/internal/filesystem"
+import (
+	"github.com/spf13/cobra"
 
-// InitFS will set the root location to store `internal/filesystem` ops files.
-// These files are used to allow `WriteFile` to backup and rollback content.
-// While they are transient in nature, they should still persist OS crashes / reboots, so, preferably under something
-// like XDGData, rather than tmp.
-func InitFS(path string) error {
-	return filesystem.SetFilesystemOpsDirectory(path)
+	"github.com/containerd/nerdctl/v2/cmd/nerdctl/helpers"
+)
+
+func Command() *cobra.Command {
+	cmd := &cobra.Command{
+		Annotations:   map[string]string{helpers.Category: helpers.Management},
+		Use:           "manifest",
+		Short:         "Manage image manifests.",
+		RunE:          helpers.UnknownSubcommandAction,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+	}
+
+	cmd.AddCommand(
+		InspectCommand(),
+		CreateCommand(),
+		AnnotateCommand(),
+		RemoveCommand(),
+		PushCommand(),
+	)
+
+	return cmd
 }
