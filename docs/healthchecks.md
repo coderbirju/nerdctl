@@ -1,6 +1,6 @@
 # Health Check Support in nerdctl
 
-`nerdctl` supports Docker-compatible health checks for containers, allowing users to monitor container health via a user-defined command.
+`nerdctl` supports Docker-compatible health checks for containers, allowing you to monitor container health through user-defined commands.
 
 ## Configuration Options
 
@@ -31,7 +31,13 @@ When a container is created, nerdctl determines the health check configuration b
 You can disable health checks using the following flag during container create/run:
 
 ```bash
---no-healthcheck
+nerdctl run -d --name app \
+  --health-cmd="./health-check.sh" \
+  --health-interval=30s \
+  --health-timeout=10s \
+  --health-retries=3 \
+  --health-start-period=60s \
+  myapp
 ```
 
 ### Running Health Checks Manually
