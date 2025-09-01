@@ -1,6 +1,6 @@
 # Health Check Support in nerdctl
 
-`nerdctl` supports Docker-compatible health checks for containers, allowing you to monitor container health through user-defined commands.
+`nerdctl` supports Docker-compatible health checks for containers, allowing users to monitor container health via a user-defined command.
 
 ## Configuration Options
 
