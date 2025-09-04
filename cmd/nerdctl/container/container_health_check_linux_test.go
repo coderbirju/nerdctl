@@ -695,8 +695,6 @@ func TestHealthCheck_SystemdIntegration_Advanced(t *testing.T) {
 					"--health-interval", "1s",
 					testutil.CommonImage, "sleep", "30")
 				nerdtest.EnsureContainerStarted(helpers, data.Identifier())
-				// Wait longer for systemd timer creation and first healthcheck execution
-				time.Sleep(3 * time.Second)
 			},
 			Cleanup: func(data test.Data, helpers test.Helpers) {
 				helpers.Anyhow("rm", "-f", data.Identifier())
@@ -724,7 +722,6 @@ func TestHealthCheck_SystemdIntegration_Advanced(t *testing.T) {
 						})
 						// Stop container and verify cleanup
 						helpers.Ensure("stop", data.Identifier())
-						time.Sleep(500 * time.Millisecond) // Allow cleanup to complete
 
 						// Check that timer is gone
 						result = helpers.Custom("systemctl", "list-timers", "--all", "--no-pager")
@@ -748,7 +745,6 @@ func TestHealthCheck_SystemdIntegration_Advanced(t *testing.T) {
 					"--health-interval", "2s",
 					testutil.CommonImage, "sleep", "60")
 				nerdtest.EnsureContainerStarted(helpers, data.Identifier())
-				time.Sleep(3 * time.Second) // Wait for initial timer creation
 			},
 			Cleanup: func(data test.Data, helpers test.Helpers) {
 				helpers.Anyhow("rm", "-f", data.Identifier())
@@ -770,7 +766,6 @@ func TestHealthCheck_SystemdIntegration_Advanced(t *testing.T) {
 
 				// Step 2: Stop container
 				helpers.Ensure("stop", data.Identifier())
-				time.Sleep(1 * time.Second) // Allow cleanup
 
 				// Step 3: Verify timer is removed after stop
 				result = helpers.Custom("systemctl", "list-timers", "--all", "--no-pager")
@@ -785,7 +780,6 @@ func TestHealthCheck_SystemdIntegration_Advanced(t *testing.T) {
 				// Step 4: Restart container
 				helpers.Ensure("start", data.Identifier())
 				nerdtest.EnsureContainerStarted(helpers, data.Identifier())
-				time.Sleep(3 * time.Second) // Wait for timer recreation
 
 				// Step 5: Verify timer is recreated after restart - this is our final verification
 				return helpers.Custom("systemctl", "list-timers", "--all", "--no-pager")

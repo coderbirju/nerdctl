@@ -38,6 +38,16 @@ func RemoveTransientHealthCheckFiles(ctx context.Context, container containerd.C
 }
 
 // RemoveTransientHealthCheckFilesByID stops and cleans up the transient timer and service using just the container ID.
+// This function is deprecated and no longer used. Use ForceRemoveTransientHealthCheckFiles instead.
+/*
 func RemoveTransientHealthCheckFilesByID(ctx context.Context, containerID string) error {
+	return nil
+}
+*/
+
+// ForceRemoveTransientHealthCheckFiles forcefully stops and cleans up the transient timer and service
+// using just the container ID. This function is non-blocking and uses timeouts to prevent hanging
+// on systemd operations. On Darwin, this is a no-op since systemd is not available.
+func ForceRemoveTransientHealthCheckFiles(ctx context.Context, containerID string) error {
 	return nil
 }
