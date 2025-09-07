@@ -50,6 +50,11 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 	log.G(ctx).Debugf("Creating healthcheck timer unit: %s", hcName)
 
 	cmd := []string{}
+	if rootlessutil.IsRootless() {
+		cmd = append(cmd, "--user")
+		cmd = append(cmd, fmt.Sprintf("--uid=%d", rootlessutil.ParentEUID()))
+	}
+
 	if path := os.Getenv("PATH"); path != "" {
 		cmd = append(cmd, "--setenv=PATH="+path)
 	}
@@ -62,11 +67,11 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 		cmd = append(cmd, "--debug")
 	}
 
-	conn, err := dbus.NewSystemConnectionContext(context.Background())
-	if err != nil {
-		return fmt.Errorf("systemd DBUS connect error: %w", err)
-	}
-	defer conn.Close()
+	// conn, err := dbus.NewSystemConnectionContext(context.Background())
+	// if err != nil {
+	// 	return fmt.Errorf("systemd DBUS connect error: %w", err)
+	// }
+	// defer conn.Close()
 
 	log.G(ctx).Debugf("creating healthcheck timer with: systemd-run %s", strings.Join(cmd, " "))
 	run := exec.Command("systemd-run", cmd...)
@@ -79,29 +84,53 @@ func CreateTimer(ctx context.Context, container containerd.Container) error {
 
 // StartTimer starts the healthcheck timer unit.
 func StartTimer(ctx context.Context, container containerd.Container) error {
+	log.G(ctx).Infof("DEBUG: StartTimer called for container %s", container.ID())
+
 	hc := extractHealthcheck(ctx, container)
 	if hc == nil {
+		log.G(ctx).Infof("DEBUG: No healthcheck found, skipping StartTimer")
 		return nil
 	}
 	if shouldSkipHealthCheckSystemd(hc) {
+		log.G(ctx).Infof("DEBUG: Skipping healthcheck systemd, shouldSkip=true")
 		return nil
 	}
 
 	hcName := hcUnitName(container.ID(), true)
-	conn, err := dbus.NewSystemConnectionContext(context.Background())
+	log.G(ctx).Infof("DEBUG: Starting timer for unit: %s, rootless=%v", hcName, rootlessutil.IsRootless())
+
+	var conn *dbus.Conn
+	var err error
+	if rootlessutil.IsRootless() {
+		log.G(ctx).Infof("DEBUG: Attempting user DBUS connection...")
+		conn, err = dbus.NewUserConnectionContext(ctx)
+	} else {
+		log.G(ctx).Infof("DEBUG: Attempting system DBUS connection...")
+		conn, err = dbus.NewSystemConnectionContext(ctx)
+	}
 	if err != nil {
+		log.G(ctx).Errorf("DEBUG: DBUS connection failed: %v", err)
 		return fmt.Errorf("systemd DBUS connect error: %w", err)
 	}
 	defer conn.Close()
+	log.G(ctx).Infof("DEBUG: DBUS connection successful")
 
 	startChan := make(chan string)
 	unit := hcName + ".service"
+	log.G(ctx).Infof("DEBUG: About to restart unit: %s", unit)
+
 	if _, err := conn.RestartUnitContext(context.Background(), unit, "fail", startChan); err != nil {
+		log.G(ctx).Errorf("DEBUG: RestartUnitContext failed: %v", err)
 		return err
 	}
+
+	log.G(ctx).Infof("DEBUG: Waiting for restart confirmation...")
 	if msg := <-startChan; msg != "done" {
+		log.G(ctx).Errorf("DEBUG: Unexpected restart result: %s", msg)
 		return fmt.Errorf("unexpected systemd restart result: %s", msg)
 	}
+
+	log.G(ctx).Infof("DEBUG: StartTimer completed successfully")
 	return nil
 }
 
@@ -114,44 +143,6 @@ func RemoveTransientHealthCheckFiles(ctx context.Context, container containerd.C
 
 	return ForceRemoveTransientHealthCheckFiles(ctx, container.ID())
 }
-
-// RemoveTransientHealthCheckFilesByID stops and cleans up the transient timer and service using just the container ID.
-// This function is deprecated and no longer used. Use ForceRemoveTransientHealthCheckFiles instead.
-/*
-func RemoveTransientHealthCheckFilesByID(ctx context.Context, containerID string) error {
-	log.G(ctx).Debugf("Removing healthcheck timer unit: %s", containerID)
-
-	conn, err := dbus.NewSystemConnectionContext(context.Background())
-	if err != nil {
-		return fmt.Errorf("systemd DBUS connect error: %w", err)
-	}
-	defer conn.Close()
-
-	unitName := hcUnitName(containerID, true)
-	timer := unitName + ".timer"
-	service := unitName + ".service"
-
-	// Stop timer
-	tChan := make(chan string)
-	if _, err := conn.StopUnitContext(context.Background(), timer, "ignore-dependencies", tChan); err == nil {
-		if msg := <-tChan; msg != "done" {
-			log.G(ctx).Warnf("timer stop message: %s", msg)
-		}
-	}
-
-	// Stop service
-	sChan := make(chan string)
-	if _, err := conn.StopUnitContext(context.Background(), service, "ignore-dependencies", sChan); err == nil {
-		if msg := <-sChan; msg != "done" {
-			log.G(ctx).Warnf("service stop message: %s", msg)
-		}
-	}
-
-	// Reset failed units
-	_ = conn.ResetFailedUnitContext(context.Background(), service)
-	return nil
-}
-*/
 
 // ForceRemoveTransientHealthCheckFiles forcefully stops and cleans up the transient timer and service
 // using just the container ID. This function is non-blocking and uses timeouts to prevent hanging
@@ -174,7 +165,13 @@ func ForceRemoveTransientHealthCheckFiles(ctx context.Context, containerID strin
 	go func() {
 		defer close(errChan)
 
-		conn, err := dbus.NewSystemConnectionContext(timeoutCtx)
+		var conn *dbus.Conn
+		var err error
+		if rootlessutil.IsRootless() {
+			conn, err = dbus.NewUserConnectionContext(ctx)
+		} else {
+			conn, err = dbus.NewSystemConnectionContext(ctx)
+		}
 		if err != nil {
 			log.G(ctx).Warnf("systemd DBUS connect error during force cleanup: %v", err)
 			errChan <- fmt.Errorf("systemd DBUS connect error: %w", err)
@@ -300,10 +297,10 @@ func shouldSkipHealthCheckSystemd(hc *Healthcheck) bool {
 		return true
 	}
 
-	// Skip healthchecks in rootless environments to avoid systemd DBUS permission issues
-	if rootlessutil.IsRootless() {
-		return true
-	}
+	// Skip healthchecks in environments without dbus-launch to avoid permission issues
+	// if _, err := exec.LookPath("dbus-launch"); err != nil {
+	// 	return true
+	// }
 
 	// Don't proceed if health check is nil, empty, explicitly NONE or interval is 0.
 	if hc == nil || len(hc.Test) == 0 || hc.Test[0] == "NONE" || hc.Interval == 0 {
