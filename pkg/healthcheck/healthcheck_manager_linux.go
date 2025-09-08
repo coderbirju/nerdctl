@@ -35,13 +35,50 @@ import (
 	"github.com/containerd/nerdctl/v2/pkg/rootlessutil"
 )
 
+// IsDbusFunctional tests if DBUS connections actually work in the current environment.
+// This is more reliable than just checking if DBUS tools are installed.
+func IsDbusFunctional(ctx context.Context) bool {
+	// Create timeout context to prevent hanging on DBUS connection attempts
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	var conn *dbus.Conn
+	var err error
+
+	if rootlessutil.IsRootless() {
+		// Test user DBUS connection for rootless environments
+		conn, err = dbus.NewUserConnectionContext(timeoutCtx)
+	} else {
+		// Test system DBUS connection for rootful environments
+		conn, err = dbus.NewSystemConnectionContext(timeoutCtx)
+	}
+
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+	return true
+}
+
 // CreateTimer sets up the transient systemd timer and service for healthchecks.
 func CreateTimer(ctx context.Context, container containerd.Container) error {
 	hc := extractHealthcheck(ctx, container)
 	if hc == nil {
+		log.G(ctx).Debugf("No healthcheck configuration found for container %s", container.ID())
 		return nil
 	}
-	if shouldSkipHealthCheckSystemd(hc) {
+
+	if shouldSkipHealthCheckSystemd(ctx, hc) {
+		// Log specific reason for skipping to help with troubleshooting
+		if !defaults.IsSystemdAvailable() {
+			log.G(ctx).Infof("Skipping healthcheck timer for container %s: systemd not available", container.ID())
+		} else if !IsDbusFunctional(ctx) {
+			log.G(ctx).Infof("Skipping healthcheck timer for container %s: DBUS connection unavailable (likely containerized environment)", container.ID())
+		} else if os.Getenv("DISABLE_HC_SYSTEMD") == "true" {
+			log.G(ctx).Infof("Skipping healthcheck timer for container %s: disabled by DISABLE_HC_SYSTEMD", container.ID())
+		} else if hc == nil || len(hc.Test) == 0 || hc.Test[0] == "NONE" || hc.Interval == 0 {
+			log.G(ctx).Debugf("Skipping healthcheck timer for container %s: invalid healthcheck configuration", container.ID())
+		}
 		return nil
 	}
 
@@ -91,7 +128,7 @@ func StartTimer(ctx context.Context, container containerd.Container) error {
 		log.G(ctx).Infof("DEBUG: No healthcheck found, skipping StartTimer")
 		return nil
 	}
-	if shouldSkipHealthCheckSystemd(hc) {
+	if shouldSkipHealthCheckSystemd(ctx, hc) {
 		log.G(ctx).Infof("DEBUG: Skipping healthcheck systemd, shouldSkip=true")
 		return nil
 	}
@@ -291,16 +328,16 @@ func extractHealthcheck(ctx context.Context, container containerd.Container) *He
 }
 
 // shouldSkipHealthCheckSystemd determines if healthcheck timers should be skipped.
-func shouldSkipHealthCheckSystemd(hc *Healthcheck) bool {
+func shouldSkipHealthCheckSystemd(ctx context.Context, hc *Healthcheck) bool {
 	// Don't proceed if systemd is unavailable or disabled
 	if !defaults.IsSystemdAvailable() || os.Getenv("DISABLE_HC_SYSTEMD") == "true" {
 		return true
 	}
 
-	// Skip healthchecks in environments without dbus-launch to avoid permission issues
-	// if _, err := exec.LookPath("dbus-launch"); err != nil {
-	// 	return true
-	// }
+	// Test actual DBUS connectivity - this is more reliable than checking for tools
+	if !IsDbusFunctional(ctx) {
+		return true
+	}
 
 	// Don't proceed if health check is nil, empty, explicitly NONE or interval is 0.
 	if hc == nil || len(hc.Test) == 0 || hc.Test[0] == "NONE" || hc.Interval == 0 {
