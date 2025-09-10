@@ -30,10 +30,40 @@ if [[ "$(id -u)" = "0" ]]; then
 		touch /workaround-issue-622
 	fi
 
+	echo "=== DBUS Debugging as ROOT ==="
+	echo "--- DBUS Tools Availability (root) ---"
+	which dbus-launch dbus-daemon dbus-send dbus-monitor systemd-run || true
+	echo "--- Environment (root) ---"
+	echo "PATH: $PATH"
+	echo "USER: $(whoami)"
+	echo "UID: $(id -u)"
+	echo "DBUS_SESSION_BUS_ADDRESS: ${DBUS_SESSION_BUS_ADDRESS:-unset}"
+	echo "XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-unset}"
+	echo "--- Systemd Status (root) ---"
+	systemctl --user status 2>&1 || echo "systemctl --user failed as root"
+	echo "--- DBUS Launch Test (root) ---"
+	dbus-launch --sh-syntax 2>&1 || echo "dbus-launch failed as root"
+
 	# Switch to the rootless user via SSH
 	systemctl start ssh
 	exec ssh -o StrictHostKeyChecking=no rootless@localhost "$0" "$@"
 else
+	echo "=== DBUS Debugging as ROOTLESS USER ==="
+	echo "--- DBUS Tools Availability (rootless) ---"
+	which dbus-launch dbus-daemon dbus-send dbus-monitor systemd-run || true
+	echo "--- Environment (rootless) ---"
+	echo "PATH: $PATH"
+	echo "USER: $(whoami)"
+	echo "UID: $(id -u)"
+	echo "DBUS_SESSION_BUS_ADDRESS: ${DBUS_SESSION_BUS_ADDRESS:-unset}"
+	echo "XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-unset}"
+	echo "--- Systemd Status (rootless) ---"
+	systemctl --user status 2>&1 || echo "systemctl --user failed as rootless"
+	echo "--- DBUS Launch Test (rootless) ---"
+	dbus-launch --sh-syntax 2>&1 || echo "dbus-launch failed as rootless"
+	echo "--- Systemd User Environment ---"
+	systemctl --user show-environment 2>&1 || echo "systemctl --user show-environment failed"
+
 	containerd-rootless-setuptool.sh install
 	if grep -q "options use-vc" /etc/resolv.conf; then
 		containerd-rootless-setuptool.sh nsenter -- sh -euc 'echo "options use-vc" >>/etc/resolv.conf'
@@ -60,6 +90,16 @@ EOF
 	systemctl --user restart stargz-snapshotter.service
 	export IPFS_PATH="/home/rootless/.local/share/ipfs"
 	containerd-rootless-setuptool.sh install-bypass4netnsd
+
+	echo "=== DBUS Debugging AFTER containerd-rootless-setuptool.sh ==="
+	echo "--- Environment After Setup ---"
+	echo "DBUS_SESSION_BUS_ADDRESS: ${DBUS_SESSION_BUS_ADDRESS:-unset}"
+	echo "XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-unset}"
+	echo "--- Systemd Status After Setup ---"
+	systemctl --user status 2>&1 || echo "systemctl --user still failed after setup"
+	echo "--- DBUS Launch Test After Setup ---"
+	dbus-launch --sh-syntax 2>&1 || echo "dbus-launch still failed after setup"
+
 	# Once ssh-ed, we lost the Dockerfile working dir, so, get back in the nerdctl checkout
 	cd /go/src/github.com/containerd/nerdctl
 	# We also lose the PATH (and SendEnv=PATH would require sshd config changes)

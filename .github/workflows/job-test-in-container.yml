@@ -151,6 +151,27 @@ jobs:
           sudo mkdir -p /etc/docker
           echo '{"ipv6": true, "fixed-cidr-v6": "2001:db8:1::/64", "experimental": true, "ip6tables": true}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
+      - name: "Debug: DBUS availability in container"
+        run: |
+          echo "=== DBUS Debugging in Container ==="
+          [ "${{ inputs.target }}" == "rootful" ] \
+            && args=(test-integration) \
+            || args=(test-integration-${{ inputs.target }})
+          docker run -t --rm --privileged "${args[@]}" bash -c '
+            echo "--- DBUS Tools Availability ---"
+            which dbus-launch dbus-daemon dbus-send dbus-monitor systemd-run || true
+            echo "--- DBUS Binaries Location ---"
+            ls -la /usr/bin/dbus* 2>/dev/null || echo "No DBUS tools in /usr/bin"
+            ls -la /bin/dbus* 2>/dev/null || echo "No DBUS tools in /bin"
+            echo "--- Systemd Tools ---"
+            which systemctl systemd-run || true
+            echo "--- Environment ---"
+            echo "PATH: $PATH"
+            echo "USER: $(whoami)"
+            echo "UID: $(id -u)"
+            echo "--- Package Info ---"
+            dpkg -l | grep -E "(dbus|systemd)" || true
+          '
       - name: "Run: integration tests"
         run: |
           . ./hack/github/action-helpers.sh
