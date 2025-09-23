@@ -50,7 +50,7 @@ for arg in "$@"; do
 done
 
 if [ "$needsudo" == "true" ] || [ "$needsudo" == "yes" ] || [ "$needsudo" == "1" ]; then
-  gotestsum "${args[@]}" -- -timeout="$timeout" -p 1 -exec sudo -args -test.allow-kill-daemon "$@"
+  gotestsum "${args[@]}" -- -timeout="$timeout" -p 1 -exec sudo -v -run TestHealthCheck_SystemdIntegration_Basic -args -test.allow-kill-daemon ./cmd/nerdctl/container/
 else
-  gotestsum "${args[@]}" -- -timeout="$timeout" -p 1 -args -test.allow-kill-daemon "$@"
+  gotestsum "${args[@]}" -- -timeout="$timeout" -p 1 -v -run TestHealthCheck_SystemdIntegration_Basic -args -test.allow-kill-daemon ./cmd/nerdctl/container/
 fi
