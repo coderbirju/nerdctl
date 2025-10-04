@@ -293,8 +293,11 @@ func Start(ctx context.Context, container containerd.Container, isAttach bool, i
 	}
 
 	// If container has health checks configured, create and start systemd timer/service files.
-	if err := healthcheck.CreateAndStartTimer(ctx, container, cfg); err != nil {
+	if err := healthcheck.CreateTimer(ctx, c, (*config.Config)(&createOpt.GOptions)); err != nil {
 		return fmt.Errorf("failed to create healthcheck timer: %w", err)
+	}
+	if err := healthcheck.StartTimer(ctx, c, (*config.Config)(&createOpt.GOptions)); err != nil {
+		return fmt.Errorf("failed to start healthcheck timer: %w", err)
 	}
 
 	if !isAttach {
@@ -529,7 +532,7 @@ func Unpause(ctx context.Context, client *containerd.Client, id string, cfg *con
 	}
 
 	// Recreate healthcheck related systemd timer/service files.
-	if err := healthcheck.CreateAndStartTimer(ctx, container, cfg); err != nil {
+	if err := healthcheck.CreateTimer(ctx, container, cfg); err != nil {
 		return fmt.Errorf("failed to create healthcheck timer: %w", err)
 	}
 

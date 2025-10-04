@@ -34,9 +34,21 @@ if [[ "$(id -u)" = "0" ]]; then
 	systemctl start ssh
 	exec ssh -o StrictHostKeyChecking=no rootless@localhost "$0" "$@"
 else
-	# Start D-Bus user session for systemd healthcheck timers
-	systemctl --user start dbus.socket dbus.service || true
+	# Ensure XDG_RUNTIME_DIR is set and create it if needed
+	export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+	mkdir -p "$XDG_RUNTIME_DIR"
+	chmod 700 "$XDG_RUNTIME_DIR"
+	
+	# Start systemd user session and D-Bus for healthcheck timers
+	systemctl --user daemon-reload || true
+	systemctl --user start dbus.socket || true
+	systemctl --user start dbus.service || true
+	
+	# Set D-Bus session address
 	export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+	
+	# Wait a moment for D-Bus to be ready
+	sleep 1
 	
 	containerd-rootless-setuptool.sh install
 	if grep -q "options use-vc" /etc/resolv.conf; then

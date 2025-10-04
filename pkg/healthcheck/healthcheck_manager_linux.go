@@ -63,10 +63,18 @@ func CreateTimer(ctx context.Context, container containerd.Container, cfg *confi
 	}
 
 	log.G(ctx).Debugf("creating healthcheck timer with: systemd-run %s", strings.Join(cmdOpts, " "))
+
+	// Add user flag for rootless mode
+	if rootlessutil.IsRootless() {
+		cmdOpts = append([]string{"--user"}, cmdOpts...)
+	}
+
 	run := exec.Command("systemd-run", cmdOpts...)
 	if out, err := run.CombinedOutput(); err != nil {
+		log.G(ctx).Errorf("systemd-run failed for container %s: %v\noutput: %s", containerID, err, strings.TrimSpace(string(out)))
 		return fmt.Errorf("systemd-run failed: %w\noutput: %s", err, strings.TrimSpace(string(out)))
 	}
+	log.G(ctx).Debugf("Successfully created healthcheck timer for container %s", containerID)
 
 	return nil
 }
@@ -371,7 +379,18 @@ func CreateAndStartTimer(ctx context.Context, container containerd.Container, cf
 	}
 
 	// Reload systemd and enable/start timer
+	log.G(ctx).Debugf("Attempting systemd reload for container %s", containerID)
 	if err := conn.ReloadContext(ctx); err != nil {
+		// Log additional debugging information
+		log.G(ctx).Errorf("systemd reload failed for container %s: %v", containerID, err)
+
+		// Try to get more information about the systemd state
+		if rootlessutil.IsRootless() {
+			log.G(ctx).Debugf("Running in rootless mode, checking user systemd status")
+		} else {
+			log.G(ctx).Debugf("Running in rootful mode, checking system systemd status")
+		}
+
 		return fmt.Errorf("systemd reload failed: %w", err)
 	}
 	_, _, err = conn.EnableUnitFilesContext(ctx, []string{containerID + ".timer"}, false, true)

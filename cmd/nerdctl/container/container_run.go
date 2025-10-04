@@ -447,8 +447,11 @@ func runAction(cmd *cobra.Command, args []string) error {
 	}
 
 	// Setup container healthchecks.
-	if err := healthcheck.CreateAndStartTimer(ctx, c, (*config.Config)(&createOpt.GOptions)); err != nil {
+	if err := healthcheck.CreateTimer(ctx, c, (*config.Config)(&createOpt.GOptions)); err != nil {
 		return fmt.Errorf("failed to create healthcheck timer: %w", err)
+	}
+	if err := healthcheck.StartTimer(ctx, c, (*config.Config)(&createOpt.GOptions)); err != nil {
+		return fmt.Errorf("failed to start healthcheck timer: %w", err)
 	}
 
 	if createOpt.Detach {
