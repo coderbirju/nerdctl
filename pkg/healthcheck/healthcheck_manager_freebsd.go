@@ -34,6 +34,11 @@ func StartTimer(ctx context.Context, container containerd.Container, cfg *config
 	return nil
 }
 
+// CreateAndStartTimer sets up the transient systemd timer and service for healthchecks.
+func CreateAndStartTimer(ctx context.Context, container containerd.Container, cfg *config.Config) error {
+	return nil
+}
+
 // RemoveTransientHealthCheckFiles stops and cleans up the transient timer and service.
 func RemoveTransientHealthCheckFiles(ctx context.Context, container containerd.Container) error {
 	return nil

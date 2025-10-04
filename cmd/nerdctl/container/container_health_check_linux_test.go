@@ -32,7 +32,6 @@ import (
 	"github.com/containerd/nerdctl/mod/tigron/tig"
 
 	"github.com/containerd/nerdctl/v2/pkg/healthcheck"
-	"github.com/containerd/nerdctl/v2/pkg/rootlessutil"
 	"github.com/containerd/nerdctl/v2/pkg/testutil"
 	"github.com/containerd/nerdctl/v2/pkg/testutil/nerdtest"
 )
@@ -44,9 +43,9 @@ func TestContainerHealthCheckBasic(t *testing.T) {
 	testCase.Require = require.Not(nerdtest.Docker)
 
 	// Skip systemd tests in rootless environment to bypass dbus permission issues
-	if rootlessutil.IsRootless() {
-		t.Skip("systemd healthcheck tests are skipped in rootless environment")
-	}
+	// if rootlessutil.IsRootless() {
+	// 	t.Skip("systemd healthcheck tests are skipped in rootless environment")
+	// }
 
 	testCase.SubTests = []*test.Case{
 		{
@@ -146,9 +145,9 @@ func TestContainerHealthCheckAdvance(t *testing.T) {
 	testCase.Require = require.Not(nerdtest.Docker)
 
 	// Skip systemd tests in rootless environment to bypass dbus permission issues
-	if rootlessutil.IsRootless() {
-		t.Skip("systemd healthcheck tests are skipped in rootless environment")
-	}
+	// if rootlessutil.IsRootless() {
+	// 	t.Skip("systemd healthcheck tests are skipped in rootless environment")
+	// }
 
 	testCase.SubTests = []*test.Case{
 		{
@@ -618,9 +617,9 @@ func TestHealthCheck_SystemdIntegration_Basic(t *testing.T) {
 	testCase := nerdtest.Setup()
 	testCase.Require = require.Not(nerdtest.Docker)
 	// Skip systemd tests in rootless environment to bypass dbus permission issues
-	if rootlessutil.IsRootless() {
-		t.Skip("systemd healthcheck tests are skipped in rootless environment")
-	}
+	// if rootlessutil.IsRootless() {
+	// 	t.Skip("systemd healthcheck tests are skipped in rootless environment")
+	// }
 
 	testCase.SubTests = []*test.Case{
 		{
@@ -802,9 +801,9 @@ func TestHealthCheck_SystemdIntegration_Advanced(t *testing.T) {
 	testCase := nerdtest.Setup()
 	testCase.Require = require.Not(nerdtest.Docker)
 	// Skip systemd tests in rootless environment to bypass dbus permission issues
-	if rootlessutil.IsRootless() {
-		t.Skip("systemd healthcheck tests are skipped in rootless environment")
-	}
+	// if rootlessutil.IsRootless() {
+	// 	t.Skip("systemd healthcheck tests are skipped in rootless environment")
+	// }
 
 	testCase.SubTests = []*test.Case{
 		{

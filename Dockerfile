@@ -286,7 +286,7 @@ RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
   bash-completion \
   ca-certificates curl \
   iproute2 iptables \
-  dbus dbus-user-session systemd systemd-sysv \
+  dbus dbus-user-session dbus-x11 systemd systemd-sysv \
   fuse3
 COPY --from=build-full /docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=out-full / /usr/local/
