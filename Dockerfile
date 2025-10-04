@@ -286,7 +286,7 @@ RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
   bash-completion \
   ca-certificates curl \
   iproute2 iptables \
-  dbus dbus-user-session systemd systemd-sysv \
+  dbus dbus-user-session dbus-x11 systemd systemd-sysv \
   fuse3
 COPY --from=build-full /docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=out-full / /usr/local/
@@ -363,6 +363,8 @@ RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
   uidmap \
   openssh-server \
   openssh-client
+# Enable D-Bus user session for systemd healthcheck timers in rootless mode
+RUN systemctl --global enable dbus.socket dbus.service
 # TODO: update containerized-systemd to enable sshd by default, or allow `systemctl wants <TARGET> ssh` here
 RUN ssh-keygen -q -t rsa -f /root/.ssh/id_rsa -N '' && \
   useradd -m -s /bin/bash rootless && \
