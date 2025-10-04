@@ -34,6 +34,10 @@ if [[ "$(id -u)" = "0" ]]; then
 	systemctl start ssh
 	exec ssh -o StrictHostKeyChecking=no rootless@localhost "$0" "$@"
 else
+	# Start D-Bus user session for systemd healthcheck timers
+	systemctl --user start dbus.socket dbus.service || true
+	export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+	
 	containerd-rootless-setuptool.sh install
 	if grep -q "options use-vc" /etc/resolv.conf; then
 		containerd-rootless-setuptool.sh nsenter -- sh -euc 'echo "options use-vc" >>/etc/resolv.conf'

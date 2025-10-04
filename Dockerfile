@@ -363,6 +363,8 @@ RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
   uidmap \
   openssh-server \
   openssh-client
+# Enable D-Bus user session for systemd healthcheck timers in rootless mode
+RUN systemctl --global enable dbus.socket dbus.service
 # TODO: update containerized-systemd to enable sshd by default, or allow `systemctl wants <TARGET> ssh` here
 RUN ssh-keygen -q -t rsa -f /root/.ssh/id_rsa -N '' && \
   useradd -m -s /bin/bash rootless && \
