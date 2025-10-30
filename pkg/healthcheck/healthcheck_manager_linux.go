@@ -62,7 +62,11 @@ func CreateTimer(ctx context.Context, container containerd.Container, cfg *confi
 		return fmt.Errorf("could not determine nerdctl executable path: %v", err)
 	}
 
-	cmdOpts = append(cmdOpts, nerdctlPath, "container", "healthcheck", containerID)
+	cmdOpts = append(cmdOpts, nerdctlPath,
+		"--namespace", cfg.Namespace,
+		"--address", cfg.Address,
+		"--data-root", cfg.DataRoot,
+		"container", "healthcheck", containerID)
 	if log.G(ctx).Logger.IsLevelEnabled(log.DebugLevel) {
 		cmdOpts = append(cmdOpts, "--debug")
 	}
