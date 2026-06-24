@@ -101,22 +101,43 @@ func Save(ctx context.Context, client *containerd.Client, images []string, optio
 		storeOpts = append(storeOpts, transferimage.WithExtraReference(imageRef))
 	}
 
-	w := nopWriteCloser{options.Stdout}
+	w := &syncWriteCloser{
+		Writer: options.Stdout,
+		done:   make(chan struct{}),
+	}
 
 	pf, done := transferutil.ProgressHandler(ctx, os.Stderr)
 	defer done()
 
-	return client.Transfer(ctx,
+	err = client.Transfer(ctx,
 		transferimage.NewStore("", storeOpts...),
 		tarchive.NewImageExportStream(w, "", exportOpts...),
 		transfer.WithProgress(pf),
 	)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the stream copy goroutine to finish writing before returning.
+	// client.Transfer returns when the server-side export completes, but the
+	// client-side goroutine in containerd's ImageExportStream.MarshalAny may
+	// still be copying streamed data to the writer. Without this wait, the
+	// caller may close the output file while the goroutine is still writing,
+	// resulting in "file already closed" errors and a truncated tar archive.
+	<-w.done
+
+	return nil
 }
 
-type nopWriteCloser struct {
+// syncWriteCloser wraps an io.Writer and signals when Close is called,
+// allowing the caller to wait until the transfer stream goroutine has
+// finished writing all data.
+type syncWriteCloser struct {
 	io.Writer
+	done chan struct{}
 }
 
-func (nopWriteCloser) Close() error {
+func (s *syncWriteCloser) Close() error {
+	close(s.done)
 	return nil
 }
